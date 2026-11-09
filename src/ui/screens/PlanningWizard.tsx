@@ -1,4 +1,5 @@
 // Sunday planning flow: target → bonuses → generated schedule → done (calendar + notifications).
+import { AlarmClock, Bell, CalendarPlus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { newId } from '../../data/db';
 import { fuelPerHourEstimate, weeklyFixedCosts, weeklyNetTarget } from '../../domain/finance';
@@ -10,7 +11,7 @@ import { BONUS_STATUS, shortDate } from '../../i18n/ro';
 import { permission, requestPermission } from '../../notifications/runner';
 import { useApp } from '../../store/app';
 import { planWeek, useSource } from '../../store/derived';
-import { Badge, Card, Chips, download, NumberField, Sheet, Stepper } from '../components';
+import { Badge, Card, download, NumberField, Segmented, Sheet, Stepper } from '../components';
 import { BonusForm, bonusSummary } from './BonusForm';
 import { DayList } from './PlanScreen';
 
@@ -69,7 +70,7 @@ export function PlanningWizard({ weekStart }: { weekStart: string }) {
 
         {step === 0 && (
           <>
-            <h1>Ținta săptămânii 🎯</h1>
+            <h1>Ținta săptămânii</h1>
             <Card>
               <Stepper label="Profit NET dorit" value={netTarget} step={50} min={0} max={20000} format={(v) => lei(v)} onChange={setNetTarget} />
               <p className="muted small">Din setări: {lei(weeklyNetTarget(settings))}. Poți pune altă țintă doar pentru această săptămână.</p>
@@ -87,7 +88,7 @@ export function PlanningWizard({ weekStart }: { weekStart: string }) {
 
         {step === 1 && (
           <>
-            <h1>Bonusurile săptămânii 🎁</h1>
+            <h1>Bonusurile săptămânii</h1>
             <p className="muted">Introdu bonusurile din aplicația Bolt. Eu calculez dacă merită și unde să lucrezi ca să le iei.</p>
             {bonuses.length === 0 && <p className="muted">Niciun bonus încă.</p>}
             {bonuses.map((b) => (
@@ -110,7 +111,7 @@ export function PlanningWizard({ weekStart }: { weekStart: string }) {
 
         {step === 2 && plan && (
           <>
-            <h1>Programul propus 🗓️</h1>
+            <h1>Programul propus</h1>
             <PlanSummary plan={plan} />
             {plan.bonusEvals.length > 0 && (
               <Card title="Bonusuri">
@@ -127,7 +128,7 @@ export function PlanningWizard({ weekStart }: { weekStart: string }) {
 
         {step === 3 && plan && (
           <>
-            <h1>Gata, săptămâna e planificată! 💪</h1>
+            <h1>Gata, săptămâna e planificată</h1>
             <Card className="highlight">
               <p className="motivation">
                 {plan.shortfall > 0
@@ -137,12 +138,12 @@ export function PlanningWizard({ weekStart }: { weekStart: string }) {
             </Card>
             <Card title="Mementouri sigure">
               <p className="muted small">Notificările aplicației merg cât timp e deschisă. Pentru alarme garantate, pune programul în calendar:</p>
-              <button className="btn primary" onClick={exportIcs}>📅 Descarcă programul (.ics)</button>
+              <button className="btn primary" onClick={exportIcs}><CalendarPlus size={20} /> Descarcă programul (.ics)</button>
               <p className="muted small">Pe Android: deschide fișierul cu aplicația Calendar. Dacă Google Calendar nu îl deschide, importă-l de pe laptop din calendar.google.com → Setări → Import.</p>
-              <a className="btn ghost" href={googlePlanningReminderUrl(addDays(weekStart, 6))} target="_blank" rel="noreferrer">⏰ Memento duminică 09:00 în Google Calendar</a>
+              <a className="btn ghost" href={googlePlanningReminderUrl(addDays(weekStart, 6))} target="_blank" rel="noreferrer"><AlarmClock size={20} /> Memento duminică 09:00 în Google Calendar</a>
             </Card>
             {perm !== 'granted' && perm !== 'unsupported' && (
-              <button className="btn ghost" onClick={async () => setPerm(await requestPermission())}>🔔 Permite notificările</button>
+              <button className="btn ghost" onClick={async () => setPerm(await requestPermission())}><Bell size={20} /> Permite notificările</button>
             )}
           </>
         )}
@@ -187,7 +188,7 @@ export function PlanSummary({ plan }: { plan: NonNullable<ReturnType<typeof plan
         Brut necesar = (țintă {lei(plan.netTarget)} + costuri {lei(plan.fixedCosts)} + combustibil ~{lei(plan.totals.fuel)}) ÷ ce rămâne după comision.
         {plan.totals.bonusGross > 0 && ` Include ~${lei(plan.totals.bonusGross)} din bonusuri.`}
       </p>
-      {plan.shortfall > 0 && <p className="warn-text">⚠️ Cu orele maxime din șablon lipsesc ~{lei(plan.shortfall)} net.</p>}
+      {plan.shortfall > 0 && <p className="warn-text">Cu orele maxime din șablon lipsesc ~{lei(plan.shortfall)} net.</p>}
     </Card>
   );
 }
@@ -202,7 +203,7 @@ export function BonusEvalRow({ ev, bonus, onMode }: { ev: BonusEval; bonus?: Bon
       </div>
       <span className="muted small">{ev.reason}</span>
       {onMode && bonus && (
-        <Chips
+        <Segmented
           options={[{ value: 'auto', label: 'Decide tu' }, { value: 'on', label: 'Îl vreau' }, { value: 'off', label: 'Nu' }]}
           value={bonus.mode}
           onChange={onMode}

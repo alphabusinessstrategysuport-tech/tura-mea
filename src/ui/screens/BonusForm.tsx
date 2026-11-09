@@ -4,7 +4,7 @@ import { lei } from '../../domain/money';
 import { fmtHM } from '../../domain/time';
 import type { Bonus, Weekday } from '../../domain/types';
 import { WEEKDAY_SHORT, WEEKDAY_NAMES } from '../../i18n/ro';
-import { Chips, Stepper, TimeField } from '../components';
+import { Chips, Segmented, Stepper, TimeField } from '../components';
 
 export function bonusSummary(b: Bonus): string {
   const days = b.days.length === 7 ? 'în fiecare zi' : [...b.days].sort().map((d) => WEEKDAY_SHORT[d]).join(', ');
@@ -41,7 +41,7 @@ export function BonusForm({ weekId, initial, onSave, onCancel }: { weekId: strin
 
   return (
     <>
-      <Chips options={[{ value: 'daily', label: 'Zilnic' }, { value: 'weekly', label: 'Săptămânal' }]} value={kind} onChange={setKind} />
+      <Segmented options={[{ value: 'daily', label: 'Zilnic' }, { value: 'weekly', label: 'Săptămânal' }]} value={kind} onChange={setKind} />
       <p className="muted small">
         {kind === 'daily' ? 'Se poate câștiga separat în fiecare zi aleasă.' : 'Cursele se adună din toate zilele alese, o singură recompensă.'}
       </p>

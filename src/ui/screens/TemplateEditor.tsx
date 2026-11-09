@@ -1,3 +1,4 @@
+import { Trash2 } from 'lucide-react';
 import { defaultTemplate } from '../../domain/defaults';
 import { num } from '../../domain/money';
 import type { DayTemplate, TimeWindow } from '../../domain/types';
@@ -41,7 +42,7 @@ export function TemplateEditor({ onBack }: { onBack: () => void }) {
                   {d.windows.length > 1 && (
                     <>
                       <Stepper label="min" value={w.minHours ?? 0} step={0.5} min={0} max={12} format={(v) => `${num(v)}h`} onChange={(v) => setWin(i, wi, { minHours: v || undefined })} />
-                      <button className="icon-btn danger" aria-label="Șterge intervalul" onClick={() => setDay(i, { windows: d.windows.filter((_, k) => k !== wi) })}>🗑</button>
+                      <button className="icon-btn danger" aria-label="Șterge intervalul" onClick={() => setDay(i, { windows: d.windows.filter((_, k) => k !== wi) })}><Trash2 size={18} /></button>
                     </>
                   )}
                 </div>
@@ -51,7 +52,7 @@ export function TemplateEditor({ onBack }: { onBack: () => void }) {
                 onChange={(v) => setDay(i, { respectHomeBy: v, windows: v ? d.windows.map((w) => ({ ...w, end: Math.min(w.end, homeBy) })) : d.windows })} />
             </>
           ) : (
-            <p className="muted">Zi liberă 😌</p>
+            <p className="muted">Zi liberă</p>
           )}
         </Card>
       ))}

@@ -1,3 +1,4 @@
+import { Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { lei, num } from '../../domain/money';
 import { recomputeDay, retotal } from '../../domain/scheduler';
@@ -41,12 +42,12 @@ export function DayEditor({ plan, day, onClose }: { plan: WeekPlan; day: DayPlan
   return (
     <Sheet open onClose={onClose} title={`Editează ${WEEKDAY_NAMES[day.weekday]}`}>
       <Timeline items={preview.items} />
-      <div className="legend"><span><i style={{ background: 'var(--good)' }} />lucru</span><span><i style={{ background: 'var(--warn)' }} />masă</span><span><i style={{ background: 'var(--rest)' }} />pauză</span></div>
+      <div className="legend"><span><i style={{ background: 'var(--teal)' }} />lucru</span><span><i style={{ background: 'var(--accent)' }} />masă</span><span><i style={{ background: 'var(--rest)' }} />pauză</span></div>
       {runs.map((r, i) => (
         <div key={i} className="window-row">
           <TimeField label="Start" value={r.start} onChange={(v) => setRun(i, { start: v })} />
           <TimeField label="Stop" value={r.end % 1440} onChange={(v) => setRun(i, { end: v })} />
-          <button className="icon-btn danger" aria-label="Șterge blocul" onClick={() => setRuns(runs.filter((_, j) => j !== i))}>🗑</button>
+          <button className="icon-btn danger" aria-label="Șterge blocul" onClick={() => setRuns(runs.filter((_, j) => j !== i))}><Trash2 size={18} /></button>
         </div>
       ))}
       <button className="btn ghost" onClick={addRun}>+ Adaugă un bloc</button>

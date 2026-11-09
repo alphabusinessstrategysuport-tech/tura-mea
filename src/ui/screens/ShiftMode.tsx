@@ -43,7 +43,7 @@ export function ShiftMode() {
       <div className="shift-mode">
         <div className="spread">
           <span className={`badge ${d.paused ? 'warn' : 'good'}`} style={{ fontSize: '.9rem', padding: '6px 12px' }}>
-            {d.paused ? '⏸ În pauză' : '● În tură'} · {fmtDuration(mins)}
+            {d.paused ? 'În pauză' : '● În tură'} · {fmtDuration(mins)}
           </span>
           <button className="btn small ghost" onClick={() => setShiftFull(true)}><LayoutGrid size={18} /> Vezi tot</button>
         </div>

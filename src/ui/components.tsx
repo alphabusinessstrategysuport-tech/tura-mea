@@ -1,6 +1,6 @@
 // Reusable UI pieces, built for one-handed use in the car: big targets, high contrast, smooth motion.
 import { animate, motion, useDragControls, useMotionValue, useTransform, type PanInfo } from 'framer-motion';
-import { ChevronsRight, Delete, Minus, Plus, Trash2, X } from 'lucide-react';
+import { Award, ChevronsRight, Delete, Minus, Plus, Sparkles, Trash2, X } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { fmtHM, parseHM } from '../domain/time';
 import { useApp } from '../store/app';
@@ -361,7 +361,7 @@ export function Celebration() {
         );
       })}
       <motion.div className="celebrate-card" initial={{ scale: 0.85, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 220, damping: 18 }}>
-        <div style={{ fontSize: '2.2rem' }}>{c.kind === 'bonus' ? '🏅' : '✨'}</div>
+        <div style={{ display: 'grid', placeItems: 'center', color: 'var(--gold)' }}>{c.kind === 'bonus' ? <Award size={44} /> : <Sparkles size={44} />}</div>
         <h2 style={{ margin: '6px 0' }}>{c.title}</h2>
         <p className="muted">{c.body}</p>
       </motion.div>

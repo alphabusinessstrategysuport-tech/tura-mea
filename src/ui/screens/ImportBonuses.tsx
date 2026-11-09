@@ -44,14 +44,14 @@ export function ImportBonuses({ code, onDone }: { code: string; onDone: (route: 
     const st = useApp.getState();
     const hadPlan = !!st.plans[parsed.weekId];
     await savePlan(planWeek(st, weekStart, Date.now(), { netTarget: st.plans[parsed.weekId]?.netTarget }));
-    showToast(`${fresh.length} bonusuri adăugate, ${hadPlan ? 'programul a fost refăcut' : 'planul săptămânii e gata'} ✅`);
+    showToast(`${fresh.length} bonusuri adăugate, ${hadPlan ? 'programul a fost refăcut' : 'planul săptămânii e gata'}`);
     onDone('plan');
   };
 
   return (
     <div className="overlay">
       <div className="screen">
-        <h1>Bonusuri de adăugat 🎁</h1>
+        <h1>Bonusuri de adăugat</h1>
         <span className="muted">{weekLabel(weekStart)}</span>
         <Card>
           <div className="list">
