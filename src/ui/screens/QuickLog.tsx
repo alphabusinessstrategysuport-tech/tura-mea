@@ -1,12 +1,14 @@
 // Quick logging sheet: big numeric keypad, minimal typing.
 import { useMemo, useState } from 'react';
-import { dayActuals } from '../../domain/actuals';
+import { Car, Fuel, Gift, Receipt } from 'lucide-react';
+import { dayActuals, frequentAmounts } from '../../domain/actuals';
 import { lei, num } from '../../domain/money';
 import { addDays } from '../../domain/time';
 import { shortDate } from '../../i18n/ro';
 import { useApp, type QuickLogMode } from '../../store/app';
 import { useDerived } from '../../store/derived';
-import { Chips, NumberField, NumPad, parseAmount, Sheet, Stepper } from '../components';
+import { Chips, NumberField, NumPad, parseAmount, Segmented, Sheet, Stepper } from '../components';
+import { haptic } from '../haptics';
 
 const TITLES: Record<QuickLogMode, string> = {
   ride: 'Adaugă cursă',
@@ -21,12 +23,12 @@ export function QuickLog() {
   if (!mode) return null;
   return (
     <Sheet open onClose={() => open(null)} title={TITLES[mode]}>
-      <Chips
+      <Segmented
         options={[
-          { value: 'ride', label: '🚕 Cursă' },
-          { value: 'fuel', label: '⛽ GPL' },
-          { value: 'payout', label: '🎁 Bonus' },
-          { value: 'total', label: '🧾 Total' },
+          { value: 'ride', label: <span className="row" style={{ gap: 4, justifyContent: 'center' }}><Car size={16} />Cursă</span> },
+          { value: 'fuel', label: <span className="row" style={{ gap: 4, justifyContent: 'center' }}><Fuel size={16} />GPL</span> },
+          { value: 'payout', label: <span className="row" style={{ gap: 4, justifyContent: 'center' }}><Gift size={16} />Bonus</span> },
+          { value: 'total', label: <span className="row" style={{ gap: 4, justifyContent: 'center' }}><Receipt size={16} />Total</span> },
         ]}
         value={mode}
         onChange={(m) => open(m as QuickLogMode)}
@@ -45,28 +47,28 @@ function RideForm() {
   const deleteEntry = useApp((x) => x.deleteEntry);
   const showToast = useApp((x) => x.showToast);
   const close = useApp((x) => x.openQuickLog);
+  const d = useDerived();
   const [v, setV] = useState('');
-  const recent = useMemo(() => {
-    const out: number[] = [];
-    for (const r of [...rides].sort((a, b) => b.ts - a.ts)) {
-      if (!out.includes(r.amount)) out.push(r.amount);
-      if (out.length >= 6) break;
-    }
-    return out;
-  }, [rides]);
+  const recent = useMemo(() => frequentAmounts(rides, Date.now()), [rides]);
 
   const add = async (amount: number) => {
     if (amount <= 0) return;
     const id = await addRide(amount);
+    haptic('ride');
     close(null);
-    showToast(`Cursă de ${lei(amount, true)} adăugată 👍`, 'Anulează', () => deleteEntry('rides', id));
+    const b = d.bonuses.find((x) => x.state === 'active' && !x.achieved);
+    const extra = b ? ` · bonus ${Math.min(b.required, b.done + 1)}/${b.required}` : ` · azi ${lei(d.todayAct.gross + amount)}`;
+    showToast(`✓ Cursă de ${lei(amount, true)} adăugată${extra}`, 'Anulează', () => deleteEntry('rides', id));
   };
 
   return (
     <>
       {recent.length > 0 && (
-        <div className="chips">
-          {recent.map((a) => <button key={a} className="chip" onClick={() => add(a)}>{num(a, 2)} lei</button>)}
+        <div>
+          <div className="eyebrow" style={{ marginBottom: 6 }}>Sumele tale frecvente</div>
+          <div className="chips">
+            {recent.map((a) => <button key={a} className="chip" style={{ minHeight: 52, minWidth: 76, justifyContent: 'center', fontSize: '1.05rem' }} onClick={() => add(a)}>{num(a, 2)}</button>)}
+          </div>
         </div>
       )}
       <NumPad value={v} onChange={setV} />
@@ -93,7 +95,7 @@ function FuelForm() {
       <button className="btn primary huge" disabled={total <= 0} onClick={async () => {
         const id = await addFuel(total, liters ?? undefined);
         close(null);
-        showToast(`Alimentare de ${lei(total)} salvată ⛽`, 'Anulează', () => deleteEntry('fuel', id));
+        haptic('success'); showToast(`✓ Alimentare de ${lei(total)} salvată`, 'Anulează', () => deleteEntry('fuel', id));
       }}>Salvează alimentarea</button>
       <p className="muted small">Din alimentări învăț cât te costă de fapt combustibilul pe oră.</p>
     </>
@@ -126,7 +128,7 @@ function PayoutForm() {
       <button className="btn primary huge" disabled={amount <= 0} onClick={async () => {
         const id = await addPayout(amount, bonusId);
         close(null);
-        showToast(`Bonus de ${lei(amount)} înregistrat 🎉`, 'Anulează', () => deleteEntry('payouts', id));
+        haptic('success'); showToast(`✓ Bonus de ${lei(amount)} înregistrat`, 'Anulează', () => deleteEntry('payouts', id));
       }}>Salvează bonusul</button>
     </>
   );
@@ -164,7 +166,7 @@ function TotalForm() {
       <button className="btn primary huge" disabled={parseAmount(v) <= 0} onClick={async () => {
         await setDailyTotal({ day, gross: parseAmount(v), rides, ...(hours > 0 && act.hours === 0 ? { hours } : {}) });
         close(null);
-        showToast('Totalul zilei a fost salvat 🧾');
+        haptic('success'); showToast('✓ Totalul zilei a fost salvat');
       }}>Salvează totalul</button>
       <p className="muted small">Totalul din Bolt (doar curse, fără bonusuri) înlocuiește cursele adăugate una câte una pentru acea zi. Orele se iau din ture, dacă le-ai pornit.</p>
       {existing && <button className="btn danger" onClick={async () => { await deleteDailyTotal(day); close(null); showToast('Total șters'); }}>Șterge totalul acestei zile</button>}

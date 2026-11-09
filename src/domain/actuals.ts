@@ -67,6 +67,27 @@ export function sumActuals(list: DayActuals[]) {
   );
 }
 
+/**
+ * Your most used ride amounts (last 60 days), for one-tap buttons.
+ * Most frequent first; ties → most recent. Falls back to recent amounts when there is little data.
+ */
+export function frequentAmounts(rides: Ride[], now: number, n = 6): number[] {
+  const since = now - 60 * 86_400_000;
+  const stats = new Map<number, { count: number; last: number }>();
+  for (const r of rides) {
+    if (r.ts < since) continue;
+    const s = stats.get(r.amount) ?? { count: 0, last: 0 };
+    s.count += 1;
+    s.last = Math.max(s.last, r.ts);
+    stats.set(r.amount, s);
+  }
+  return [...stats.entries()]
+    .sort((a, b) => b[1].count - a[1].count || b[1].last - a[1].last)
+    .slice(0, n)
+    .map(([amount]) => amount)
+    .sort((a, b) => a - b);
+}
+
 export function ridesBetween(rides: Ride[], from: number, to: number): Ride[] {
   return rides.filter((r) => r.ts >= from && r.ts < to);
 }

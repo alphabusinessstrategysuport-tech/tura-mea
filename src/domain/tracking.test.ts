@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dayActuals, shiftIntervals, shiftMinutes } from './actuals';
+import { dayActuals, frequentAmounts, shiftIntervals, shiftMinutes } from './actuals';
 import { bonusProgress, expandBonus } from './bonus';
 import { defaultHeatmap, defaultSettings, defaultTemplate } from './defaults';
 import { weeklyFixedCosts, weeklyNetTarget } from './finance';
@@ -46,6 +46,15 @@ describe('actuals', () => {
     expect(a.rideGross).toBe(250);
     expect(a.rideCount).toBe(11);
     expect(a.usedDailyTotal).toBe(true);
+  });
+});
+
+describe('frequent amounts', () => {
+  it('suggests the most used amounts, sorted', () => {
+    const now = zonedToTs(MON, 20 * 60);
+    const r = [...rides(MON, 8 * 60, 5, 22), ...rides(MON, 12 * 60, 3, 31.5), ...rides(MON, 14 * 60, 1, 60), ...rides('2026-08-01', 600, 9, 99)];
+    const f = frequentAmounts(r, now, 2);
+    expect(f).toEqual([22, 31.5]); // 99 is older than 60 days, 60 used only once
   });
 });
 
