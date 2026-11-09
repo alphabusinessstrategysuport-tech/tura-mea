@@ -5,7 +5,8 @@ import type { BreakRules, Heatmap, PlanItem, Run } from './types';
 
 const STEP = 10;
 
-export function layoutRun(run: Run, weekday: number, rules: BreakRules, heat?: Heatmap): PlanItem[] {
+/** `avoid`: time ranges where a meal should not go (e.g. bonus windows). */
+export function layoutRun(run: Run, weekday: number, rules: BreakRules, heat?: Heatmap, avoid: Run[] = []): PlanItem[] {
   const items: PlanItem[] = [];
   let t = run.start;
   let workStart = t;
@@ -20,14 +21,18 @@ export function layoutRun(run: Run, weekday: number, rules: BreakRules, heat?: H
   while (t < run.end) {
     const remaining = run.end - t;
 
-    if (mealAt === null && sinceMeal >= rules.mealAfterMin - 30) {
-      const ideal = t + Math.max(0, rules.mealAfterMin - sinceMeal);
+    const ideal = t + Math.max(0, rules.mealAfterMin - sinceMeal);
+    const inAvoidAt = (c: number) => avoid.some((a) => c < a.end && c + rules.mealMin > a.start);
+    // Normally the meal is chosen 30 min before → 60 min after the ideal moment.
+    // If the ideal moment falls inside a bonus window, look up to 2.5 h earlier.
+    const early = inAvoidAt(ideal) ? 150 : 30;
+    if (mealAt === null && sinceMeal >= rules.mealAfterMin - early) {
       let best = -1;
       let bestScore = Infinity;
-      for (let k = 0; k <= 6; k++) {
+      for (let k = 0; t + k * STEP <= ideal + 60; k++) {
         const c = t + k * STEP;
         if (run.end - c - rules.mealMin < 60) break; // keep at least 1h of work after the meal
-        const score = (heat ? demandAt(heat, weekday, c) : 0) + Math.abs(c - ideal) / 6;
+        const score = (heat ? demandAt(heat, weekday, c) : 0) + Math.abs(c - ideal) / 6 + (inAvoidAt(c) ? 500 : 0);
         if (score < bestScore) {
           bestScore = score;
           best = c;

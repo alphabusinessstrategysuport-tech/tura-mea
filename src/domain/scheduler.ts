@@ -49,6 +49,7 @@ interface DayState {
   sel: boolean[];
   minSlot: number;
   items: PlanItem[];
+  avoid: Run[]; // accepted bonus windows: keep meals out of them
   work: number; // hours
 }
 
@@ -61,6 +62,21 @@ function mergeRuns(runs: Run[]): Run[] {
     else out.push({ ...r });
   }
   return out;
+}
+
+/** Parts of `r` not covered by `segs`. */
+function subtractRuns(r: Run, segs: Run[]): Run[] {
+  let parts: Run[] = [{ ...r }];
+  for (const g of segs) {
+    parts = parts.flatMap((p) => {
+      if (g.end <= p.start || g.start >= p.end) return [p];
+      const out: Run[] = [];
+      if (g.start > p.start) out.push({ start: p.start, end: g.start });
+      if (g.end < p.end) out.push({ start: g.end, end: p.end });
+      return out;
+    });
+  }
+  return parts.filter((p) => p.end - p.start >= SLOT);
 }
 
 export function runsOfSlots(sel: boolean[]): Run[] {
@@ -78,8 +94,8 @@ export function runsOfSlots(sel: boolean[]): Run[] {
 }
 
 /** Items (work + breaks) for a list of runs. */
-export function layoutDay(runs: Run[], weekday: number, s: Settings, heat: Heatmap): PlanItem[] {
-  return runs.flatMap((r) => layoutRun(r, weekday, s.breaks, heat));
+export function layoutDay(runs: Run[], weekday: number, s: Settings, heat: Heatmap, avoid: Run[] = []): PlanItem[] {
+  return runs.flatMap((r) => layoutRun(r, weekday, s.breaks, heat, avoid));
 }
 
 function segIndex(segs: Run[], slot: number): number {
@@ -109,11 +125,11 @@ export function schedule(input: ScheduleInput): WeekPlan {
     if (!tpl?.enabled) continue;
     let minSlot = 0;
     if (input.notBefore && input.notBefore.day === day) minSlot = Math.ceil(input.notBefore.minute / SLOT);
-    states.set(day, { day, weekday: wd, tpl, segs: mergeRuns(tpl.windows), sel: Array(MAX_SLOTS).fill(false), minSlot, items: [], work: 0 });
+    states.set(day, { day, weekday: wd, tpl, segs: mergeRuns(tpl.windows), sel: Array(MAX_SLOTS).fill(false), minSlot, items: [], work: 0, avoid: [] });
   }
 
   const refresh = (st: DayState) => {
-    st.items = layoutDay(runsOfSlots(st.sel), st.weekday, s, heat);
+    st.items = layoutDay(runsOfSlots(st.sel), st.weekday, s, heat, st.avoid);
     st.work = workMinutes(st.items) / 60;
   };
   const itemsByDay = () => new Map([...states.values()].map((st) => [st.day, st.items] as [DayKey, PlanItem[]]));
@@ -122,18 +138,25 @@ export function schedule(input: ScheduleInput): WeekPlan {
   const slotRides = (st: DayState, slot: number) => integrate(model.ridesPerHour, st.weekday, slot * SLOT, slot * SLOT + SLOT);
 
   /** Can `slot` be added while keeping one continuous block per window and respecting max hours? */
-  const canAdd = (st: DayState, slot: number, maxHours: number): boolean => {
+  // `allowSplit`: bonuses may open an extra block in the same window (e.g. a morning AND an evening bonus).
+  const canAdd = (st: DayState, slot: number, maxHours: number, allowSplit = false): boolean => {
     if (slot < st.minSlot || slot >= MAX_SLOTS || st.sel[slot]) return false;
     const gi = segIndex(st.segs, slot);
     if (gi < 0) return false;
     const adjacent = (slot > 0 && st.sel[slot - 1]) || (slot + 1 < MAX_SLOTS && st.sel[slot + 1]);
     if (!adjacent) {
-      const g = st.segs[gi];
-      for (let i = Math.floor(g.start / SLOT); i < Math.ceil(g.end / SLOT); i++) if (st.sel[i]) return false;
+      if (allowSplit) {
+        // a new block must start at least 1h away from existing work, and at most 3 blocks a day
+        for (let i = Math.max(0, slot - 2); i <= Math.min(MAX_SLOTS - 1, slot + 2); i++) if (st.sel[i]) return false;
+        if (runsOfSlots(st.sel).length >= 3) return false;
+      } else {
+        const g = st.segs[gi];
+        for (let i = Math.floor(g.start / SLOT); i < Math.ceil(g.end / SLOT); i++) if (st.sel[i]) return false;
+      }
     }
     if (st.work + SLOT / 60 <= maxHours + EPS) return true;
     st.sel[slot] = true;
-    const w = workMinutes(layoutDay(runsOfSlots(st.sel), st.weekday, s, heat)) / 60;
+    const w = workMinutes(layoutDay(runsOfSlots(st.sel), st.weekday, s, heat, st.avoid)) / 60;
     st.sel[slot] = false;
     return w <= maxHours + EPS;
   };
@@ -180,23 +203,53 @@ export function schedule(input: ScheduleInput): WeekPlan {
     const avgRph = windowHours > 0 ? maxRides / windowHours : 0;
     const hoursNeeded = avgRph > 0 ? b.ridesRequired / avgRph : Infinity;
     const grossRate = windowHours > 0 ? grossWin / windowHours : 0;
-    const eff = Number.isFinite(hoursNeeded) ? grossRate * keep - fuelH + (b.reward * keep) / hoursNeeded : 0;
-    const impossible = inst.windows.length === 0 || maxRides < b.ridesRequired * 0.9 || hoursNeeded > Math.min(windowHours, maxHoursAvail) + EPS;
+    const effHours = Math.min(hoursNeeded, windowHours);
+    const eff = effHours > 0 && Number.isFinite(effHours) ? grossRate * keep - fuelH + (b.reward * keep) / effHours : 0;
+    // "Impossible" only when clearly out of reach: estimates are rough, Bolt designs bonuses around ~2–2.5 rides/h.
+    const impossible = inst.windows.length === 0 || maxRides < b.ridesRequired * 0.85 || hoursNeeded > Math.min(windowHours * 1.1, maxHoursAvail) + EPS;
     const worth = !impossible && eff >= baselineNetPerHour * (relax ? 1.3 : 1.0);
     const accepted = b.mode === 'on' ? inst.windows.length > 0 : b.mode === 'off' ? false : worth;
     return { inst, accepted, worth, impossible, maxRides, hoursNeeded, eff, relax };
   });
 
   // Accepted bonus windows become allowed time (this is how 21:00 is relaxed).
+  // Only the parts outside your usual windows are added, as separate segments, so a bonus
+  // never glues your day and night windows into one long block.
   for (const d of decisions) {
     if (!d.accepted) continue;
     for (const w of d.inst.windows) {
       const st = states.get(w.day)!;
-      st.segs = mergeRuns([...st.segs, { start: w.start, end: Math.min(w.end, MAX_SLOTS * SLOT) }]);
+      const extra = subtractRuns({ start: w.start, end: Math.min(w.end, MAX_SLOTS * SLOT) }, st.segs);
+      st.segs = [...st.segs, ...extra].sort((a, b) => a.start - b.start);
+      st.avoid.push({ start: w.start, end: w.end });
     }
   }
 
-  // ---------- Phase A: minimum hours ----------
+  // ---------- Phase B (first): bonuses that are worth it ----------
+  const accepted = decisions.filter((d) => d.accepted).sort((a, b) => b.eff - a.eff);
+  for (const d of accepted) {
+    const need = d.inst.bonus.ridesRequired * BONUS_MARGIN;
+    const touched = [...new Set(d.inst.windows.map((w) => states.get(w.day)!))];
+    const snapshot = touched.map((st) => [...st.sel]);
+    for (let guard = 0; guard < 200; guard++) {
+      if (expectedRidesInWindows(d.inst.windows, itemsByDay(), model).total >= need) break;
+      const cands: { st: DayState; slot: number; value: number }[] = [];
+      for (const w of d.inst.windows) {
+        const st = states.get(w.day)!;
+        for (const i of slotsIn(st, w)) if (canAdd(st, i, st.tpl.maxHours, true)) cands.push({ st, slot: i, value: slotRides(st, i) });
+      }
+      if (!addBest(cands)) break;
+    }
+    // Clearly out of reach within your limits (< 90% of the rides) → undo, don't leave useless fragments.
+    if (expectedRidesInWindows(d.inst.windows, itemsByDay(), model).total < d.inst.bonus.ridesRequired * 0.9) {
+      touched.forEach((st, k) => {
+        st.sel = snapshot[k];
+        refresh(st);
+      });
+    }
+  }
+
+  // ---------- Phase A: minimum hours (your habits) ----------
   for (const st of states.values()) {
     const tplSegs = mergeRuns(st.tpl.windows);
     for (const w of st.tpl.windows) {
@@ -210,21 +263,6 @@ export function schedule(input: ScheduleInput): WeekPlan {
     while (st.work < st.tpl.minHours - EPS) {
       const cands: { st: DayState; slot: number; value: number }[] = [];
       for (let i = st.minSlot; i < MAX_SLOTS; i++) if (inRuns(tplSegs, i) && canAdd(st, i, st.tpl.maxHours)) cands.push({ st, slot: i, value: slotGross(st, i) });
-      if (!addBest(cands)) break;
-    }
-  }
-
-  // ---------- Phase B: bonuses ----------
-  const accepted = decisions.filter((d) => d.accepted).sort((a, b) => b.eff - a.eff);
-  for (const d of accepted) {
-    const need = d.inst.bonus.ridesRequired * BONUS_MARGIN;
-    for (let guard = 0; guard < 200; guard++) {
-      if (expectedRidesInWindows(d.inst.windows, itemsByDay(), model).total >= need) break;
-      const cands: { st: DayState; slot: number; value: number }[] = [];
-      for (const w of d.inst.windows) {
-        const st = states.get(w.day)!;
-        for (const i of slotsIn(st, w)) if (canAdd(st, i, st.tpl.maxHours)) cands.push({ st, slot: i, value: slotRides(st, i) });
-      }
       if (!addBest(cands)) break;
     }
   }
@@ -335,6 +373,9 @@ export function schedule(input: ScheduleInput): WeekPlan {
     } else if (ratio >= 0.95) {
       status = 'strans';
       reason = `La limită: ~${Math.round(exp.total)} curse estimate pentru ${required}. Fii activ în fereastră.`;
+    } else if (ratio >= 0.85) {
+      status = 'strans';
+      reason = `La limită: estimez ~${Math.round(exp.total)} curse pentru ${required}. Îți trebuie un ritm peste medie, fără pauze lungi în fereastră.`;
     } else {
       status = 'neplanificat';
       reason = 'Nu încape în limitele tale de ore. Mărește orele maxime ale zilei dacă îl vrei.';

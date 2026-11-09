@@ -116,6 +116,30 @@ describe('scheduler', () => {
     expect(plan.days[4].bonusGross + plan.days[5].bonusGross).toBeCloseTo(250);
   });
 
+  it('handles a real Bolt week: morning + evening bonuses, Saturday night bonus', () => {
+    const rows: [number, number, number, number, number][] = [
+      [1, 6, 9, 7, 78], [1, 16, 19, 7, 78], [2, 6, 10, 9, 99], [2, 15, 19, 8, 87],
+      [3, 6, 12, 12, 132], [3, 14, 20, 12, 66], [4, 7, 10, 7, 78], [4, 11, 15, 8, 87], [4, 15, 21, 12, 132],
+      [5, 9, 15, 14, 153], [5, 17, 21, 10, 111], [5, 23, 28, 12, 132], [6, 9, 15, 14, 153], [6, 15, 21, 14, 153],
+    ];
+    const bonuses = rows.map(([d, s, e, r, p], i) => bonus({ id: `b${i}`, days: [d as 0], start: s * 60, end: e * 60, ridesRequired: r, reward: p }));
+    const input = base({ bonuses });
+    const plan = schedule(input);
+    const ev = (id: string) => plan.bonusEvals.find((x) => x.bonusId === id)!;
+    // Wednesday: two separate blocks so both bonuses fit
+    expect(ev('b2').expectedRides).toBeGreaterThan(0);
+    expect(ev('b3').expectedRides).toBeGreaterThan(0);
+    expect(plan.days[2].runs.length).toBeGreaterThanOrEqual(2);
+    // Saturday night bonus is planned and day/night stay separate blocks
+    expect(ev('b11').expectedRides).toBeGreaterThanOrEqual(12);
+    expect(plan.days[5].runs.length).toBeGreaterThanOrEqual(2);
+    // 14 rides in 6h is tight, not impossible
+    expect(ev('b9').status).not.toBe('imposibil');
+    // limits still respected
+    plan.days.forEach((d, i) => expect(d.workHours).toBeLessThanOrEqual(input.template[i].maxHours + 1e-6));
+    expect(plan.totals.bonusGross).toBeGreaterThan(500);
+  });
+
   it('re-plans only the remaining days with what was already earned', () => {
     const input = base();
     const full = schedule(input);

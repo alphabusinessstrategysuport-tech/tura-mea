@@ -4,6 +4,7 @@ import { useNotificationLoop, useWakeLock } from './notifications/runner';
 import { useApp } from './store/app';
 import { useDerived } from './store/derived';
 import { HistoryScreen } from './ui/screens/HistoryScreen';
+import { ImportBonuses } from './ui/screens/ImportBonuses';
 import { QuickLog } from './ui/screens/QuickLog';
 import { StatsScreen } from './ui/screens/StatsScreen';
 import { TodayScreen } from './ui/screens/TodayScreen';
@@ -28,6 +29,12 @@ function readRoute(): Route {
   return ROUTES.includes(r) ? r : 'azi';
 }
 
+/** Bonus link: #/import/<code> */
+function readImportCode(): string | null {
+  const m = location.hash.match(/^#\/import\/([A-Za-z0-9_-]+)/);
+  return m ? m[1] : null;
+}
+
 export function App() {
   const ready = useApp((x) => x.ready);
   const init = useApp((x) => x.init);
@@ -35,10 +42,14 @@ export function App() {
   const hideToast = useApp((x) => x.hideToast);
   const wizardWeek = useApp((x) => x.wizardWeek);
   const [route, setRoute] = useState<Route>(readRoute);
+  const [importCode, setImportCode] = useState(readImportCode);
 
   useEffect(() => {
     init();
-    const onHash = () => setRoute(readRoute());
+    const onHash = () => {
+      setRoute(readRoute());
+      setImportCode(readImportCode());
+    };
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
   }, [init]);
@@ -60,6 +71,7 @@ export function App() {
         : <TodayScreen go={go} />}
 
       {wizardWeek && <PlanningWizard weekStart={wizardWeek} />}
+      {importCode && <ImportBonuses code={importCode} onDone={go} />}
       <QuickLog />
 
       {toast && (
