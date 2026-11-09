@@ -19,7 +19,7 @@ export interface CostItem {
   period: 'week' | 'month';
 }
 
-export type NotificationType = 'leave' | 'breaks' | 'bonus' | 'goHome' | 'planning' | 'progress';
+export type NotificationType = 'leave' | 'breaks' | 'bonus' | 'goHome' | 'planning' | 'progress' | 'summary' | 'backup';
 
 export interface BreakRules {
   mealAfterMin: number; // continuous work before a meal break

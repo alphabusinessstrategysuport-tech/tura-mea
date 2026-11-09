@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { BonusProgress } from './bonus';
 import { defaultHeatmap, defaultSettings } from './defaults';
 import { buildIcs, googlePlanningReminderUrl, nextSunday } from './ics';
-import { allNotices, dueNotices, nextNoticeAt, type NoticeContext } from './notifications';
+import { allNotices, applyLimits, dueNotices, inQuietHours, nextNoticeAt, type Notice, type NoticeContext, type SentEntry } from './notifications';
 import { emptyDay } from './scheduler';
 import { zonedToTs } from './time';
 import type { Bonus, DayPlan, WeekPlan } from './types';
@@ -95,6 +95,65 @@ describe('notifications', () => {
   it('finds the next notice time for scheduling', () => {
     const c = ctx({ now: zonedToTs(MON, 12 * 60) });
     expect(nextNoticeAt(c, new Set())).toBe(zonedToTs(MON, 15 * 60 + 45));
+  });
+});
+
+describe('new notice types', () => {
+  it('announces the end of a break during a shift', () => {
+    const all = allNotices(ctx({ shiftActive: true }));
+    expect(all.some((n) => n.key === `breakend:${MON}:${18 * 60 + 10}` && n.title === 'Pauza s-a terminat')).toBe(true);
+  });
+
+  it('suggests going back on the road when a rush starts during a pause', () => {
+    const c = ctx({ shiftActive: true, paused: true, now: zonedToTs(MON, 16 * 60 + 50) }); // weekday 17:00 = rush
+    expect(dueNotices(c, new Set()).some((n) => n.title === 'Începe aglomerația')).toBe(true);
+  });
+
+  it('sends a day summary after the shift and a week summary on Sunday 20:00', () => {
+    const end = zonedToTs(MON, 20 * 60 + 35);
+    const day = dueNotices(ctx({ dayDone: { endedAt: end, earned: 312, hours: 6 }, now: end + 60_000 }), new Set());
+    expect(day.find((n) => n.type === 'summary')?.body).toContain('312 lei');
+    const sun = '2026-11-15';
+    const week = dueNotices(ctx({ today: sun, dayPlans: [], week: { id: '2026-W46', net: 1400, target: 1270 }, now: zonedToTs(sun, 20 * 60 + 1) }), new Set());
+    expect(week.find((n) => n.key === 'week:2026-W46')?.title).toBe('Săptămână reușită 🏆');
+  });
+
+  it('reminds about a backup on Sunday evening only when overdue', () => {
+    const sun = '2026-11-15';
+    const at = zonedToTs(sun, 20 * 60 + 31);
+    expect(dueNotices(ctx({ today: sun, dayPlans: [], now: at }), new Set()).some((n) => n.type === 'backup')).toBe(true);
+    expect(dueNotices(ctx({ today: sun, dayPlans: [], now: at, lastBackupAt: at - 86_400_000 }), new Set()).some((n) => n.type === 'backup')).toBe(false);
+  });
+});
+
+describe('anti-spam limits', () => {
+  const n = (key: string, type: Notice['type']): Notice => ({ key, type, title: key, body: '', at: 0 });
+  const now = zonedToTs(MON, 15 * 60);
+  const base = { now, maxPerDay: 8, quietFrom: 0, quietTo: 420, shiftActive: false };
+
+  it('sends only the most important non-urgent notice at a time', () => {
+    const r = applyLimits([n('a', 'breaks'), n('b', 'goHome'), n('c', 'bonus')], [], base);
+    expect(r.send.map((x) => x.key)).toEqual(['c', 'b']);
+    expect(r.drop.map((x) => x.key)).toEqual(['a']);
+  });
+
+  it('keeps 20 minutes between notices, except bonus countdowns', () => {
+    const log: SentEntry[] = [{ key: 'x', at: now - 5 * 60_000, type: 'leave' }];
+    expect(applyLimits([n('a', 'breaks')], log, base).send).toHaveLength(0);
+    expect(applyLimits([n('b', 'bonus')], log, base).send).toHaveLength(1);
+  });
+
+  it('respects the daily maximum', () => {
+    const log: SentEntry[] = Array.from({ length: 8 }, (_, i) => ({ key: `k${i}`, at: now - (i + 1) * 3_600_000 / 4, type: 'leave' as const }));
+    expect(applyLimits([n('b', 'bonus')], log, base).send).toHaveLength(0);
+  });
+
+  it('is silent in quiet hours (unless in a shift) and while muted', () => {
+    const night = zonedToTs(MON, 3 * 60);
+    expect(applyLimits([n('a', 'leave')], [], { ...base, now: night }).send).toHaveLength(0);
+    expect(applyLimits([n('a', 'bonus')], [], { ...base, now: night, shiftActive: true }).send).toHaveLength(1);
+    expect(applyLimits([n('a', 'bonus')], [], { ...base, muteUntil: now + 60_000 }).send).toHaveLength(0);
+    expect(inQuietHours(zonedToTs(MON, 23 * 60 + 30), 22 * 60, 7 * 60)).toBe(true);
   });
 });
 

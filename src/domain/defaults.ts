@@ -20,7 +20,7 @@ export function defaultSettings(): Settings {
     homeBy: h(21),
     dayCutoffHour: 5,
     breaks: { mealAfterMin: 240, mealMin: 40, restEveryMin: 120, restMin: 10 },
-    notifications: { leave: true, breaks: true, bonus: true, goHome: true, planning: true, progress: true },
+    notifications: { leave: true, breaks: true, bonus: true, goHome: true, planning: true, progress: true, summary: true, backup: true },
     notifyLeadMin: 15,
     keepScreenOn: true,
     theme: 'dark',

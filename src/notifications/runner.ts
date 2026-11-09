@@ -1,13 +1,18 @@
-// Browser side of notifications: permission, showing them through the service worker,
-// a loop that checks what is due, and keeping the screen on during a shift.
+// Browser side of notifications: permission, showing them (system notification or in-app banner),
+// a loop that checks what is due and applies the anti-spam limits, and keeping the screen on during a shift.
 //
 // LIMITATION: a PWA cannot schedule exact notifications while it is fully closed
 // (no server push). Notices are shown while the app is open or recently in the background.
 // For guaranteed reminders use the calendar export (.ics).
 import { useEffect, useRef } from 'react';
-import { dueNotices, nextNoticeAt, type Notice, type NoticeContext } from '../domain/notifications';
+import { weeklyFixedCosts } from '../domain/finance';
+import { applyLimits, dueNotices, nextNoticeAt, type Notice, type NoticeContext } from '../domain/notifications';
+import { summarize } from '../domain/stats';
+import { dayKeyOf, minuteOfDay, weekDays, weekdayOf } from '../domain/time';
 import type { Derived } from '../store/derived';
 import { useApp } from '../store/app';
+
+export const MUTE_CACHE = 'tura-meta';
 
 export function notificationsSupported(): boolean {
   return typeof window !== 'undefined' && 'Notification' in window;
@@ -24,13 +29,14 @@ export async function requestPermission(): Promise<NotificationPermission | 'uns
 
 export async function showNotice(n: Pick<Notice, 'title' | 'body' | 'key'>): Promise<boolean> {
   if (permission() !== 'granted') return false;
-  const options: NotificationOptions & { vibrate?: number[] } = {
+  const options: NotificationOptions & { vibrate?: number[]; actions?: { action: string; title: string }[] } = {
     body: n.body,
     tag: n.key,
     icon: 'icon-192.png',
     badge: 'icon-192.png',
     vibrate: [180, 80, 180],
     data: { url: location.href.split('#')[0] + '#/azi' },
+    actions: [{ action: 'mute', title: 'Liniște 1h' }],
   };
   try {
     const reg = await navigator.serviceWorker?.getRegistration();
@@ -45,10 +51,35 @@ export async function showNotice(n: Pick<Notice, 'title' | 'body' | 'key'>): Pro
   }
 }
 
+/** "Liniște 1h" pressed on a notification: the service worker stores the time in a small cache. */
+async function muteUntil(): Promise<number | undefined> {
+  try {
+    const c = await caches.open(MUTE_CACHE);
+    const r = await c.match('/mute');
+    return r ? Number(await r.text()) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function contextFrom(d: Derived): NoticeContext {
-  const { settings, heatmap } = useApp.getState();
+  const st = useApp.getState();
+  const { settings, heatmap } = st;
+  const now = Date.now();
+  // Day summary: last finished shift of today (no shift running).
+  const ended = st.data.shifts.filter((s) => s.day === d.today && s.end !== null);
+  const dayDone = !d.shift && ended.length
+    ? { endedAt: Math.max(...ended.map((s) => s.end as number)), earned: d.todayAct.gross, hours: d.hoursToday }
+    : undefined;
+  // Week result, only needed on Sunday evening.
+  let week: NoticeContext['week'];
+  const cal = dayKeyOf(now);
+  if (weekdayOf(cal) === 6 && minuteOfDay(now) >= 19 * 60) {
+    const sum = summarize({ days: weekDays(d.weekStart), data: st.data, settings, model: d.model, fixedCosts: weeklyFixedCosts(settings), netTarget: d.weekNetTarget, now });
+    if (sum.hours > 0) week = { id: d.weekId, net: sum.money.net, target: d.weekNetTarget };
+  }
   return {
-    now: Date.now(),
+    now,
     today: d.today,
     settings,
     heat: heatmap,
@@ -56,9 +87,13 @@ function contextFrom(d: Derived): NoticeContext {
     todayTarget: d.todayTarget,
     todayEarned: d.todayAct.gross,
     shiftActive: !!d.shift,
+    paused: d.paused,
     bonuses: d.bonuses,
     nextWeekPlanned: d.nextWeekPlanned,
     nextWeekId: d.nextWeekId,
+    dayDone,
+    week,
+    lastBackupAt: st.lastBackupAt,
   };
 }
 
@@ -69,22 +104,37 @@ export function useNotificationLoop(d: Derived) {
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined;
+    let busy = false;
     const tick = async () => {
-      const app = useApp.getState();
-      const ctx = contextFrom(ref.current);
-      const sent = new Set(app.sent);
-      const due = dueNotices(ctx, sent);
-      if (due.length) {
-        await app.markSent(due.map((n) => n.key));
-        for (const n of due) {
-          const shown = await showNotice(n);
-          if (!shown && document.visibilityState === 'visible') app.showToast(`${n.title} — ${n.body}`);
+      if (busy) return;
+      busy = true;
+      try {
+        const app = useApp.getState();
+        const ctx = contextFrom(ref.current);
+        const due = dueNotices(ctx, new Set(app.sent));
+        if (due.length) {
+          const s = app.settings;
+          const { send, drop } = applyLimits(due, app.sentLog, {
+            now: ctx.now, maxPerDay: s.notifyMaxPerDay, quietFrom: s.quietFrom, quietTo: s.quietTo,
+            shiftActive: ctx.shiftActive, muteUntil: await muteUntil(),
+          });
+          await app.logNotices(send, drop);
+          const visible = document.visibilityState === 'visible';
+          for (const n of send) {
+            if (visible) {
+              // App on screen: a calm in-app banner instead of a system notification.
+              if (n.type !== 'summary') app.showBanner(n);
+            } else if (!(await showNotice(n))) {
+              app.showBanner(n);
+            }
+          }
         }
+        clearTimeout(timer);
+        const next = nextNoticeAt(ctx, new Set(useApp.getState().sent));
+        timer = setTimeout(tick, next ? Math.min(Math.max(1000, next - Date.now() + 500), 30_000) : 30_000);
+      } finally {
+        busy = false;
       }
-      clearTimeout(timer);
-      const next = nextNoticeAt(ctx, new Set(useApp.getState().sent));
-      if (next) timer = setTimeout(tick, Math.min(Math.max(1000, next - Date.now() + 500), 30_000));
-      else timer = setTimeout(tick, 30_000);
     };
     tick();
     const vis = () => document.visibilityState === 'visible' && tick();

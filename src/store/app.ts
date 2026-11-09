@@ -4,6 +4,7 @@ import { defaultHeatmap, defaultSettings, defaultTemplate } from '../domain/defa
 import { activeShift } from '../domain/actuals';
 import { workDayOf } from '../domain/time';
 import type { Bonus, DailyTotal, Heatmap, LoggedData, Settings, WeekPlan, WeekTemplate } from '../domain/types';
+import type { Notice, SentEntry } from '../domain/notifications';
 import { db, newId } from '../data/db';
 import { exportAll, importAll, type BackupFile } from '../data/backup';
 
@@ -25,6 +26,9 @@ interface AppState {
   bonuses: Bonus[];
   data: LoggedData;
   sent: string[];
+  sentLog: SentEntry[];
+  lastBackupAt?: number;
+  banner: Notice | null;
 
   // UI
   quickLog: QuickLogMode | null;
@@ -54,6 +58,9 @@ interface AppState {
   deleteDailyTotal: (day: string) => Promise<void>;
   deleteEntry: (table: 'rides' | 'fuel' | 'payouts' | 'shifts', id: string) => Promise<void>;
   markSent: (keys: string[]) => Promise<void>;
+  /** notices sent (counted for the daily limit) and dropped (never sent later) */
+  logNotices: (sent: Notice[], dropped: Notice[]) => Promise<void>;
+  showBanner: (n: Notice | null) => void;
 
   exportBackup: () => Promise<BackupFile>;
   importBackup: (f: BackupFile) => Promise<void>;
@@ -114,6 +121,9 @@ export const useApp = create<AppState>((set, get) => {
     bonuses: [],
     data: emptyData(),
     sent: [],
+    sentLog: [],
+    lastBackupAt: undefined,
+    banner: null,
     quickLog: null,
     wizardWeek: null,
     toast: null,
@@ -134,6 +144,8 @@ export const useApp = create<AppState>((set, get) => {
         template: (get_('template') as WeekTemplate | undefined) ?? defaultTemplate(),
         heatmap: (get_('heatmap') as Heatmap | undefined) ?? defaultHeatmap(),
         sent: (get_('sent') as string[] | undefined) ?? [],
+        sentLog: (get_('sentLog') as SentEntry[] | undefined) ?? [],
+        lastBackupAt: get_('lastBackupAt') as number | undefined,
         plans: Object.fromEntries(plans.map((p) => [p.id, p])),
         bonuses,
         data: { shifts, rides, fuel, payouts, dailyTotals },
@@ -236,7 +248,22 @@ export const useApp = create<AppState>((set, get) => {
       set({ sent });
     },
 
-    exportBackup: () => exportAll(db()),
+    async exportBackup() {
+      const f = await exportAll(db());
+      const at = Date.now();
+      await kvPut('lastBackupAt', at);
+      set({ lastBackupAt: at });
+      return f;
+    },
+    async logNotices(sent, dropped) {
+      const now = Date.now();
+      const keys = [...get().sent, ...sent.map((n) => n.key), ...dropped.map((n) => n.key)].slice(-500);
+      const sentLog = [...get().sentLog, ...sent.map((n) => ({ key: n.key, at: now, type: n.type }))].filter((e) => now - e.at < 3 * 86_400_000);
+      await kvPut('sent', keys);
+      await kvPut('sentLog', sentLog);
+      set({ sent: keys, sentLog });
+    },
+    showBanner: (n) => set({ banner: n }),
     async importBackup(f) {
       await importAll(db(), f);
       await get().init();

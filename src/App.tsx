@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { BarChart3, CalendarDays, Home, Settings } from 'lucide-react';
+import { BarChart3, BellRing, CalendarDays, Home, Settings } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { NAV } from './i18n/ro';
 import { useNotificationLoop, useWakeLock } from './notifications/runner';
@@ -49,6 +49,30 @@ function useCelebrations(d: ReturnType<typeof useDerived>) {
       celebrate({ kind: 'bonus', title: `Bonus de ${lei(b.bonus.reward)} atins`, body: `${b.done}/${b.required} curse. Bravo! Nu uita să-l înregistrezi când îl primești.` });
     }
   }, [d.today, d.todayTarget, d.todayAct.gross, d.bonuses, sent, markSent, celebrate]);
+}
+
+/** Calm banner at the top, used instead of a system notification while the app is on screen. */
+function InAppBanner() {
+  const banner = useApp((x) => x.banner);
+  const showBanner = useApp((x) => x.showBanner);
+  useEffect(() => {
+    if (!banner) return;
+    haptic(banner.type === 'bonus' ? 'warn' : 'tap');
+    const t = setTimeout(() => showBanner(null), 7000);
+    return () => clearTimeout(t);
+  }, [banner, showBanner]);
+  return (
+    <AnimatePresence>
+      {banner && (
+        <motion.div key={banner.key} className="in-app-banner" role="status" onClick={() => showBanner(null)}
+          initial={{ y: -90, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -90, opacity: 0 }}
+          drag="y" dragConstraints={{ top: 0, bottom: 0 }} onDragEnd={(_, i) => i.offset.y < -30 && showBanner(null)}>
+          <span className="ico"><BellRing size={20} /></span>
+          <div><b>{banner.title}</b><div className="muted small">{banner.body}</div></div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
 }
 
 type Route = 'azi' | 'plan' | 'stats' | 'setari' | 'istoric';
@@ -133,6 +157,7 @@ export function App() {
       {showOnboarding && !importCode && <Onboarding />}
       <QuickLog />
       <Celebration />
+      <InAppBanner />
 
       <AnimatePresence>
         {toast && (

@@ -27,6 +27,8 @@ export const NOTIFICATION_LABELS: Record<NotificationType, { label: string; exam
   goHome: { label: 'Timpul de mers acasă', example: '„Gata pe azi 🏠”' },
   planning: { label: 'Planificarea de duminică', example: '„Hai să planificăm săptămâna” (09:00)' },
   progress: { label: 'Ținta zilei atinsă', example: '„Ținta de azi e atinsă 🎉”' },
+  summary: { label: 'Rezumat zi și săptămână', example: '„Azi: 312 lei, 6h 10m, 51 lei/h” · duminică 20:00' },
+  backup: { label: 'Memento backup', example: 'Duminică seara, dacă n-ai făcut backup de o săptămână' },
 };
 
 export function greeting(hour: number): string {
