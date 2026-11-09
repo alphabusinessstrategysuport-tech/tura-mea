@@ -30,6 +30,9 @@ interface AppState {
   quickLog: QuickLogMode | null;
   wizardWeek: string | null; // weekStart
   toast: Toast | null;
+  celebration: Celebration | null;
+  /** during a shift: focused driving screen, or the full app */
+  shiftFull: boolean;
 
   init: () => Promise<void>;
   setSettings: (s: Settings) => Promise<void>;
@@ -58,6 +61,15 @@ interface AppState {
   openWizard: (weekStart: string | null) => void;
   showToast: (text: string, actionLabel?: string, action?: () => void) => void;
   hideToast: () => void;
+  celebrate: (c: Celebration) => void;
+  clearCelebration: () => void;
+  setShiftFull: (v: boolean) => void;
+}
+
+export interface Celebration {
+  kind: 'day' | 'week' | 'bonus';
+  title: string;
+  body: string;
 }
 
 /** Fills fields added in newer versions with defaults. */
@@ -74,6 +86,8 @@ function mergeSettings(saved: Partial<Settings> | undefined): Settings {
     breaks: { ...d.breaks, ...saved.breaks },
     notifications: { ...d.notifications, ...saved.notifications },
     costItems: saved.costItems ?? d.costItems,
+    // Settings saved by an older version = an existing user who already configured everything.
+    onboarded: saved.onboarded ?? true,
   };
 }
 
@@ -101,6 +115,8 @@ export const useApp = create<AppState>((set, get) => {
     quickLog: null,
     wizardWeek: null,
     toast: null,
+    celebration: null,
+    shiftFull: false,
 
     async init() {
       const d = db();
@@ -155,6 +171,7 @@ export const useApp = create<AppState>((set, get) => {
       const s = { id: newId(), day: workDayOf(t, get().settings.dayCutoffHour), start: t, end: null, pauses: [] };
       await db().shifts.put(s);
       setData({ shifts: [...get().data.shifts, s] });
+      set({ shiftFull: false });
     },
     async pauseShift() {
       const a = activeShift(get().data.shifts);
@@ -232,5 +249,8 @@ export const useApp = create<AppState>((set, get) => {
       }, 5000);
     },
     hideToast: () => set({ toast: null }),
+    celebrate: (c) => set({ celebration: c }),
+    clearCelebration: () => set({ celebration: null }),
+    setShiftFull: (v) => set({ shiftFull: v }),
   };
 });

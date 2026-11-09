@@ -33,6 +33,10 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        // Only Latin + Latin Extended (Romanian diacritics) font files are kept offline.
+        globIgnores: ['**/*cyrillic*', '**/*greek*', '**/*vietnamese*'],
+        // OCR engine is loaded on demand only (bonus import from screenshots).
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
         navigateFallback: 'index.html',
         importScripts: ['sw-notify.js'],
       },

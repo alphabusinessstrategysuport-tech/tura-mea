@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { registerSW } from 'virtual:pwa-register';
 import { App } from './App';
+import '@fontsource-variable/inter/wght.css';
 import './ui/theme.css';
 
 // Service worker: offline support + notifications. Updates install automatically.

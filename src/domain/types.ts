@@ -43,6 +43,14 @@ export interface Settings {
   notifications: Record<NotificationType, boolean>;
   notifyLeadMin: number; // "leave now" lead time
   keepScreenOn: boolean;
+  theme: 'dark' | 'light';
+  haptics: boolean;
+  /** first-launch setup done (existing users: true) */
+  onboarded: boolean;
+  /** notification limits */
+  notifyMaxPerDay: number;
+  quietFrom: number; // day minutes, e.g. 0 = 00:00
+  quietTo: number; // e.g. 420 = 07:00
 }
 
 export interface TimeWindow {

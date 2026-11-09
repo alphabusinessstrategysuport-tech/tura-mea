@@ -23,6 +23,12 @@ export function defaultSettings(): Settings {
     notifications: { leave: true, breaks: true, bonus: true, goHome: true, planning: true, progress: true },
     notifyLeadMin: 15,
     keepScreenOn: true,
+    theme: 'dark',
+    haptics: false,
+    onboarded: false,
+    notifyMaxPerDay: 8,
+    quietFrom: 0,
+    quietTo: 7 * 60,
   };
 }
 
