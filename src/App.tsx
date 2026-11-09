@@ -15,6 +15,10 @@ import { QuickLog } from './ui/screens/QuickLog';
 import { SettingsScreen } from './ui/screens/SettingsScreen';
 import { StatsScreen } from './ui/screens/StatsScreen';
 import { TodayScreen } from './ui/screens/TodayScreen';
+import { ShiftMode } from './ui/screens/ShiftMode';
+import { activeShift } from './domain/actuals';
+import { message } from './domain/messages';
+import { lei } from './domain/money';
 
 /** Runs the notification loop and keeps the screen on during a shift. Renders nothing. */
 function Background() {
@@ -22,7 +26,28 @@ function Background() {
   const keepScreenOn = useApp((x) => x.settings.keepScreenOn);
   useNotificationLoop(d);
   useWakeLock(!!d.shift && !d.paused && keepScreenOn);
+  useCelebrations(d);
   return null;
+}
+
+/** Celebrates (once) when today's target or a bonus is reached. */
+function useCelebrations(d: ReturnType<typeof useDerived>) {
+  const sent = useApp((x) => x.sent);
+  const markSent = useApp((x) => x.markSent);
+  const celebrate = useApp((x) => x.celebrate);
+  useEffect(() => {
+    const dayKey = `cel:day:${d.today}`;
+    if (d.todayTarget > 0 && d.todayAct.gross >= d.todayTarget && d.todayAct.gross > 0 && !sent.includes(dayKey)) {
+      markSent([dayKey]);
+      celebrate({ kind: 'day', title: 'Ținta de azi e atinsă', body: message('goalReached', d.today, { earned: d.todayAct.gross }) });
+      return;
+    }
+    const b = d.bonuses.find((x) => x.achieved && !sent.includes(`cel:bonus:${x.key}`));
+    if (b) {
+      markSent([`cel:bonus:${b.key}`]);
+      celebrate({ kind: 'bonus', title: `Bonus de ${lei(b.bonus.reward)} atins`, body: `${b.done}/${b.required} curse. Bravo! Nu uita să-l înregistrezi când îl primești.` });
+    }
+  }, [d.today, d.todayTarget, d.todayAct.gross, d.bonuses, sent, markSent, celebrate]);
 }
 
 type Route = 'azi' | 'plan' | 'stats' | 'setari' | 'istoric';
@@ -53,6 +78,8 @@ export function App() {
   const hideToast = useApp((x) => x.hideToast);
   const wizardWeek = useApp((x) => x.wizardWeek);
   const theme = useApp((x) => x.settings.theme);
+  const inShift = useApp((x) => !!activeShift(x.data.shifts));
+  const shiftFull = useApp((x) => x.shiftFull);
   const [route, setRoute] = useState<Route>(readRoute);
   const [importCode, setImportCode] = useState(readImportCode);
 
@@ -93,6 +120,7 @@ export function App() {
         </motion.div>
       </AnimatePresence>
 
+      {inShift && !shiftFull && <ShiftMode />}
       {wizardWeek && <PlanningWizard weekStart={wizardWeek} />}
       {importCode && <ImportBonuses code={importCode} onDone={go} />}
       <QuickLog />

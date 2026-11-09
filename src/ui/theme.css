@@ -141,7 +141,8 @@ a { color: var(--accent); }
 .ring-sub { color: var(--muted); font-size: .8rem; }
 .triple { display: grid; grid-template-columns: auto 1fr; gap: 18px; align-items: center; }
 .legend-rows { display: flex; flex-direction: column; gap: 10px; }
-.legend-row { display: grid; grid-template-columns: 10px 1fr auto; gap: 8px; align-items: baseline; font-size: .9rem; }
+.legend-row { display: grid; grid-template-columns: 10px 1fr; column-gap: 8px; align-items: center; font-size: .85rem; color: var(--muted); }
+.legend-row b { grid-column: 2; color: var(--text); font-size: .98rem; white-space: nowrap; }
 .legend-row i { width: 10px; height: 10px; border-radius: 99px; display: inline-block; }
 .legend-row b { font-variant-numeric: tabular-nums; }
 

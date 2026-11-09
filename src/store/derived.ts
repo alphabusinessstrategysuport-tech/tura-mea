@@ -105,6 +105,10 @@ export interface Derived {
   currentItem?: PlanItem;
   nextItem?: PlanItem;
   dayPlansForNotices: DayPlan[];
+  expectedSoFar: number;
+  plannedHoursToday: number;
+  freeDay: boolean;
+  beforeFirstBlock: boolean;
 }
 
 export function computeDerived(src: Source, now: number): Derived {
@@ -143,10 +147,25 @@ export function computeDerived(src: Source, now: number): Derived {
   const remainingToday = Math.max(0, todayTarget - todayAct.gross);
   const tplToday = src.template[days.indexOf(today)];
   const plannedHoursToday = todayPlan?.workHours ?? (tplToday?.enabled ? (tplToday.minHours + tplToday.maxHours) / 2 : 0);
-  const remainingPlannedHours = Math.max(0.5, plannedHoursToday - hoursToday);
   const nowMin = dayMinutesOf(now, today);
+  // Hours of planned work still ahead today (at least 1h, so the "needed per hour" stays realistic).
+  const plannedLeftMin = todayPlan
+    ? todayPlan.items.filter((i) => i.kind === 'work').reduce((a, i) => a + Math.max(0, i.end - Math.max(i.start, nowMin)), 0)
+    : Math.max(0, plannedHoursToday - hoursToday) * 60;
+  const remainingPlannedHours = Math.max(1, plannedLeftMin / 60);
   const currentItem = todayPlan?.items.find((i) => i.start <= nowMin && nowMin < i.end);
   const nextItem = todayPlan?.items.find((i) => i.start > nowMin && (i.kind !== 'work' || !currentItem || currentItem.kind !== 'work'));
+
+  // Where you "should" be by now: share of today's planned work already behind us.
+  const workItems = todayPlan?.items.filter((i) => i.kind === 'work') ?? [];
+  const plannedWorkMin = workItems.reduce((a, i) => a + i.end - i.start, 0);
+  const elapsedWorkMin = workItems.reduce((a, i) => a + Math.max(0, Math.min(i.end, nowMin) - i.start), 0);
+  const expectedSoFar = plannedWorkMin > 0
+    ? (todayTarget * elapsedWorkMin) / plannedWorkMin
+    : plannedHoursToday > 0 ? (todayTarget * Math.min(1, hoursToday / plannedHoursToday)) : 0;
+  const freeDay = !!todayPlan && todayPlan.workHours === 0 && todayAct.gross === 0;
+  const firstRun = todayPlan?.runs[0];
+  const beforeFirstBlock = !!firstRun && nowMin < firstRun.start;
 
   const bonuses = instancesForDay(src.bonuses.filter((b) => b.weekId === weekId), weekStart, today).map((inst) => bonusProgress(inst, src.data.rides, now));
 
@@ -164,6 +183,7 @@ export function computeDerived(src: Source, now: number): Derived {
     perHourNow: hoursToday > 0.05 ? todayAct.rideGross / hoursToday : 0,
     neededPerHour: remainingToday / remainingPlannedHours,
     bonuses, currentItem, nextItem, dayPlansForNotices,
+    expectedSoFar, plannedHoursToday, freeDay, beforeFirstBlock,
   };
 }
 
