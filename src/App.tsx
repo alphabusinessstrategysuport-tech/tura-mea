@@ -16,6 +16,7 @@ import { SettingsScreen } from './ui/screens/SettingsScreen';
 import { StatsScreen } from './ui/screens/StatsScreen';
 import { TodayScreen } from './ui/screens/TodayScreen';
 import { ShiftMode } from './ui/screens/ShiftMode';
+import { Onboarding } from './ui/screens/Onboarding';
 import { activeShift } from './domain/actuals';
 import { message } from './domain/messages';
 import { lei } from './domain/money';
@@ -80,6 +81,8 @@ export function App() {
   const theme = useApp((x) => x.settings.theme);
   const inShift = useApp((x) => !!activeShift(x.data.shifts));
   const shiftFull = useApp((x) => x.shiftFull);
+  const largeText = useApp((x) => x.settings.largeText);
+  const showOnboarding = useApp((x) => x.onboardingOpen || !x.settings.onboarded);
   const [route, setRoute] = useState<Route>(readRoute);
   const [importCode, setImportCode] = useState(readImportCode);
 
@@ -92,6 +95,10 @@ export function App() {
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
   }, [init]);
+
+  useEffect(() => {
+    document.documentElement.dataset.text = largeText ? 'large' : '';
+  }, [largeText]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -123,6 +130,7 @@ export function App() {
       {inShift && !shiftFull && <ShiftMode />}
       {wizardWeek && <PlanningWizard weekStart={wizardWeek} />}
       {importCode && <ImportBonuses code={importCode} onDone={go} />}
+      {showOnboarding && !importCode && <Onboarding />}
       <QuickLog />
       <Celebration />
 

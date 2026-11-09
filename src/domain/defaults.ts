@@ -25,6 +25,7 @@ export function defaultSettings(): Settings {
     keepScreenOn: true,
     theme: 'dark',
     haptics: false,
+    largeText: false,
     onboarded: false,
     notifyMaxPerDay: 8,
     quietFrom: 0,
@@ -55,6 +56,22 @@ export function defaultTemplate(): WeekTemplate {
       { start: h(21), end: h(29), minHours: 4 }, // until 05:00 Sunday morning
     ], false),
     day(6, 10, 12, [{ start: h(8), end: h(23) }], false),
+  ];
+}
+
+/** Ready-made work patterns for the first-launch setup (all editable later). */
+export function templatePresets(): { id: string; label: string; description: string; template: WeekTemplate }[] {
+  const weekdays = (minH: number, maxH: number, start: number, end: number): DayTemplate[] =>
+    [0, 1, 2, 3, 4].map((wd) => day(wd, minH, maxH, [{ start: h(start), end: h(end) }], end <= 21));
+  const off = (wd: number): DayTemplate => ({ ...day(wd, 0, 0, [{ start: h(9), end: h(17) }], false), enabled: false });
+  return [
+    { id: 'ramp', label: 'Crește spre weekend', description: 'L–Ma 4–5 h, Mi 6 h, J 7–8 h, V seara, S zi + noapte, D toată ziua.', template: defaultTemplate() },
+    { id: 'weekdays', label: 'Zile lucrătoare', description: 'L–V cam 8 h între 07:00 și 19:00, weekend liber.', template: [...weekdays(7, 9, 7, 19), off(5), off(6)] },
+    { id: 'evenings', label: 'Seara și weekend', description: 'L–V seara 17:00–23:00, S și D după-amiaza și seara.', template: [
+      ...weekdays(4, 6, 17, 23),
+      day(5, 6, 9, [{ start: h(14), end: h(26) }], false),
+      day(6, 6, 9, [{ start: h(13), end: h(23) }], false),
+    ] },
   ];
 }
 

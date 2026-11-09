@@ -74,6 +74,43 @@ export function summarize(args: {
   };
 }
 
+const WD = ['Lunea', 'Marțea', 'Miercurea', 'Joia', 'Vinerea', 'Sâmbăta', 'Duminica'];
+
+/**
+ * 1–3 short, useful observations from real data (needs a few worked days).
+ * e.g. "Vinerea câștigi cu 28% mai mult pe oră decât media ta."
+ */
+export function insights(list: DayActuals[], cells: { hours: number[][]; gross: number[][] }): string[] {
+  const out: string[] = [];
+  const worked = list.filter((d) => d.hours > 0.5);
+  const totalH = worked.reduce((a, d) => a + d.hours, 0);
+  const totalG = worked.reduce((a, d) => a + d.gross, 0);
+  if (worked.length < 3 || totalH < 6) return out;
+  const avg = totalG / totalH;
+
+  const byWd = perWeekday(worked).filter((x) => x.hours >= 2);
+  if (byWd.length >= 2) {
+    const best = byWd.reduce((a, b) => (b.gross / b.hours > a.gross / a.hours ? b : a));
+    const diff = (best.gross / best.hours / avg - 1) * 100;
+    if (diff >= 8) out.push(`${WD[best.weekday]} câștigi cu ${Math.round(diff)}% mai mult pe oră decât media ta.`);
+  }
+
+  let bestCell: { wd: number; h: number; rate: number } | null = null;
+  for (let wd = 0; wd < 7; wd++) for (let h = 0; h < 24; h++) {
+    const hrs = cells.hours[wd][h];
+    if (hrs < 1) continue;
+    const rate = cells.gross[wd][h] / hrs;
+    if (!bestCell || rate > bestCell.rate) bestCell = { wd, h, rate };
+  }
+  if (bestCell && bestCell.rate > avg * 1.15) {
+    out.push(`Cea mai bună oră: ${WD[bestCell.wd].toLowerCase()} ${String(bestCell.h).padStart(2, '0')}:00, ~${Math.round(bestCell.rate)} lei/h.`);
+  }
+
+  const bonus = worked.reduce((a, d) => a + d.bonusGross, 0);
+  if (bonus > 0 && totalG > 0) out.push(`Bonusurile au adus ${Math.round((bonus / totalG) * 100)}% din încasări.`);
+  return out.slice(0, 3);
+}
+
 /** Average gross per weekday across the given days (for "best days"). */
 export function perWeekday(list: DayActuals[]): { weekday: Weekday; gross: number; hours: number }[] {
   const out = Array.from({ length: 7 }, (_, i) => ({ weekday: i as Weekday, gross: 0, hours: 0 }));

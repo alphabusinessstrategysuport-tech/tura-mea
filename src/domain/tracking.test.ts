@@ -3,11 +3,11 @@ import { dayActuals, frequentAmounts, shiftIntervals, shiftMinutes } from './act
 import { bonusProgress, expandBonus } from './bonus';
 import { defaultHeatmap, defaultSettings, defaultTemplate } from './defaults';
 import { weeklyFixedCosts, weeklyNetTarget } from './finance';
-import { learnModel } from './learning';
+import { cellStats, learnModel } from './learning';
 import { priorModel } from './model';
 import { rebalance } from './rebalance';
 import { schedule } from './scheduler';
-import { summarize } from './stats';
+import { insights, summarize } from './stats';
 import { HOUR, weekDays, weekdayOf, zonedToTs } from './time';
 import type { Bonus, LoggedData, Ride, Shift } from './types';
 
@@ -143,6 +143,25 @@ describe('rebalance', () => {
     const r = rebalance({ plan: { ...plan, netTarget: 6000 }, today: MON, actuals: actualsFor(empty()), settings: s, model, template: defaultTemplate() });
     expect(r.shortfallGross).toBeGreaterThan(0);
     for (const d of r.days) expect(d.suggestedHours).toBeLessThanOrEqual(defaultTemplate()[weekdayOf(d.day)].maxHours + 1e-6);
+  });
+});
+
+describe('insights', () => {
+  it('finds the best weekday, best hour and bonus share', () => {
+    const data = empty();
+    const days = ['2026-11-09', '2026-11-10', '2026-11-13']; // Mon, Tue, Fri
+    data.shifts.push(shift(days[0], 9 * 60, 13 * 60), shift(days[1], 9 * 60, 13 * 60), shift(days[2], 18 * 60, 22 * 60));
+    data.rides.push(...rides(days[0], 9 * 60, 8, 25, 30), ...rides(days[1], 9 * 60, 8, 25, 30), ...rides(days[2], 18 * 60, 10, 40, 24));
+    data.payouts.push({ id: 'p', day: days[2], ts: zonedToTs(days[2], 23 * 60), amount: 100 });
+    const list = days.map((d) => dayActuals(d, data, Date.now()));
+    const out = insights(list, cellStats(data, Date.now()));
+    expect(out[0]).toMatch(/^Vinerea câștigi cu \d+% mai mult/);
+    expect(out.some((s) => s.startsWith('Cea mai bună oră: vinerea'))).toBe(true);
+    expect(out.some((s) => s.includes('Bonusurile au adus'))).toBe(true);
+  });
+
+  it('stays quiet without enough data', () => {
+    expect(insights([dayActuals(MON, empty(), 0)], cellStats(empty(), 0))).toEqual([]);
   });
 });
 

@@ -45,6 +45,7 @@ export interface Settings {
   keepScreenOn: boolean;
   theme: 'dark' | 'light';
   haptics: boolean;
+  largeText: boolean;
   /** first-launch setup done (existing users: true) */
   onboarded: boolean;
   /** notification limits */

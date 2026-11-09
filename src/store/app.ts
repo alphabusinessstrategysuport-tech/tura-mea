@@ -33,6 +33,7 @@ interface AppState {
   celebration: Celebration | null;
   /** during a shift: focused driving screen, or the full app */
   shiftFull: boolean;
+  onboardingOpen: boolean;
 
   init: () => Promise<void>;
   setSettings: (s: Settings) => Promise<void>;
@@ -64,6 +65,7 @@ interface AppState {
   celebrate: (c: Celebration) => void;
   clearCelebration: () => void;
   setShiftFull: (v: boolean) => void;
+  openOnboarding: (v: boolean) => void;
 }
 
 export interface Celebration {
@@ -117,6 +119,7 @@ export const useApp = create<AppState>((set, get) => {
     toast: null,
     celebration: null,
     shiftFull: false,
+    onboardingOpen: false,
 
     async init() {
       const d = db();
@@ -252,5 +255,6 @@ export const useApp = create<AppState>((set, get) => {
     celebrate: (c) => set({ celebration: c }),
     clearCelebration: () => set({ celebration: null }),
     setShiftFull: (v) => set({ shiftFull: v }),
+    openOnboarding: (v) => set({ onboardingOpen: v }),
   };
 });
