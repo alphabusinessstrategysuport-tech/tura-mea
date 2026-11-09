@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { NAV } from './i18n/ro';
 import { useApp } from './store/app';
+import { PlanningWizard } from './ui/screens/PlanningWizard';
+import { PlanScreen } from './ui/screens/PlanScreen';
 import { SettingsScreen } from './ui/screens/SettingsScreen';
 
 type Route = 'azi' | 'plan' | 'stats' | 'setari' | 'istoric';
@@ -16,6 +18,7 @@ export function App() {
   const init = useApp((x) => x.init);
   const toast = useApp((x) => x.toast);
   const hideToast = useApp((x) => x.hideToast);
+  const wizardWeek = useApp((x) => x.wizardWeek);
   const [route, setRoute] = useState<Route>(readRoute);
 
   useEffect(() => {
@@ -34,7 +37,11 @@ export function App() {
 
   return (
     <div className="app">
-      {route === 'setari' ? <SettingsScreen go={go} /> : <div className="screen"><h1>{route}</h1><p className="muted">În lucru…</p></div>}
+      {route === 'setari' ? <SettingsScreen go={go} />
+        : route === 'plan' ? <PlanScreen />
+        : <div className="screen"><h1>{route}</h1><p className="muted">În lucru…</p></div>}
+
+      {wizardWeek && <PlanningWizard weekStart={wizardWeek} />}
 
       {toast && (
         <div className="toast" role="status">
