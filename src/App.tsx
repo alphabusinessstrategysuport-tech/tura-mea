@@ -5,6 +5,7 @@ import { useApp } from './store/app';
 import { useDerived } from './store/derived';
 import { HistoryScreen } from './ui/screens/HistoryScreen';
 import { QuickLog } from './ui/screens/QuickLog';
+import { StatsScreen } from './ui/screens/StatsScreen';
 import { TodayScreen } from './ui/screens/TodayScreen';
 import { PlanningWizard } from './ui/screens/PlanningWizard';
 import { PlanScreen } from './ui/screens/PlanScreen';
@@ -55,8 +56,8 @@ export function App() {
       {route === 'setari' ? <SettingsScreen go={go} />
         : route === 'plan' ? <PlanScreen />
         : route === 'istoric' ? <HistoryScreen go={go} />
-        : route === 'azi' ? <TodayScreen go={go} />
-        : <div className="screen"><h1>{route}</h1><p className="muted">În lucru…</p></div>}
+        : route === 'stats' ? <StatsScreen />
+        : <TodayScreen go={go} />}
 
       {wizardWeek && <PlanningWizard weekStart={wizardWeek} />}
       <QuickLog />
