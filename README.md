@@ -86,21 +86,25 @@ npm run build
 
 ## Publicare gratuită pe GitHub Pages
 
-Am ales **GitHub Pages**: e gratuit, codul și aplicația stau în același loc și se publică singură la fiecare `git push`. Fișierul [.github/workflows/deploy.yml](.github/workflows/deploy.yml) rulează testele, face build-ul și publică.
+Aplicația e publicată pe **GitHub Pages**, gratuit:
 
-1. Pe [github.com/new](https://github.com/new) creează un repository, de exemplu `tura-mea`. Poate fi public; datele tale nu ajung niciodată acolo, doar codul.
-2. În folderul proiectului:
-   ```bash
-   git remote add origin https://github.com/UTILIZATORUL_TAU/tura-mea.git
-   ```
-   ```bash
-   git push -u origin main
-   ```
-3. Pe GitHub: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
-4. În tab-ul **Actions** aștepți să se termine „Deploy pe GitHub Pages” (1–2 minute).
-5. Aplicația e la `https://UTILIZATORUL_TAU.github.io/tura-mea/`.
+- **Adresa aplicației:** https://alphabusinessstrategysuport-tech.github.io/tura-mea/
+- **Codul:** https://github.com/alphabusinessstrategysuport-tech/tura-mea (ramura `main`)
+- **Versiunea publicată:** ramura `gh-pages`, care conține doar fișierele construite. Nu o modifica de mână.
 
-De acum, orice `git push` pe `main` publică automat versiunea nouă. Telefonul o preia la următoarea deschidere a aplicației.
+**Cum publici o versiune nouă** după ce modifici codul:
+
+```bash
+git push
+```
+
+```bash
+npm run deploy
+```
+
+`npm run deploy` (fișierul [scripts/deploy.mjs](scripts/deploy.mjs)) rulează testele, construiește aplicația pentru adresa `/tura-mea/` și o urcă pe ramura `gh-pages`. GitHub o publică în 1–2 minute. Telefonul preia versiunea nouă la următoarea deschidere a aplicației.
+
+> **Publicare automată (opțional, mai târziu):** cu GitHub Actions, aplicația s-ar publica singură la fiecare `git push`. Pentru asta, contul GitHub CLI are nevoie de permisiunea `workflow` (`gh auth refresh -h github.com -s workflow`). Un fișier workflow gata făcut există în ramura locală `backup-inainte-de-publicare`, la `.github/workflows/deploy.yml`.
 
 > Alternativă: pe Netlify sau Vercel imporți repository-ul, comanda de build e `npm run build` și folderul de publicat e `dist`.
 
@@ -224,11 +228,12 @@ Exemple de modificări:
 - [x] Urmărire live: ture cu pauze, curse, GPL, bonusuri, total zi, reechilibrare
 - [x] Notificări (în aplicație și sistem) + mementouri prin calendar
 - [x] Statistici săptămână/lună + învățare din datele reale
-- [x] Backup JSON, offline, instalare PWA, deploy automat pe GitHub Pages
+- [x] Backup JSON, offline, instalare PWA, publicare pe GitHub Pages (`npm run deploy`)
 - [x] 53 de teste unitare pentru logica de business
 
 **Idei pentru pașii următori:**
 - Web Push printr-un server gratuit (notificări sigure cu aplicația închisă)
+- Publicare automată cu GitHub Actions (cere permisiunea `workflow`)
 - Bonus săptămânal cu praguri multiple (de ex. 50 curse = 150 lei, 80 curse = 300 lei)
 - Factor de vreme sau evenimente (ploaie, concerte) care crește cererea pe o zi
 - Grafic cu evoluția pe mai multe luni
