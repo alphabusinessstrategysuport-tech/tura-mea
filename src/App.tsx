@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { NAV } from './i18n/ro';
+import { useNotificationLoop, useWakeLock } from './notifications/runner';
 import { useApp } from './store/app';
+import { useDerived } from './store/derived';
 import { HistoryScreen } from './ui/screens/HistoryScreen';
 import { QuickLog } from './ui/screens/QuickLog';
 import { TodayScreen } from './ui/screens/TodayScreen';
@@ -8,7 +10,16 @@ import { PlanningWizard } from './ui/screens/PlanningWizard';
 import { PlanScreen } from './ui/screens/PlanScreen';
 import { SettingsScreen } from './ui/screens/SettingsScreen';
 
-type Route = 'azi' | 'plan' | 'stats' | 'setari' | 'istoric';
+/** Runs the notification loop and keeps the screen on during a shift. Renders nothing. */
+function Background() {
+  const d = useDerived();
+  const keepScreenOn = useApp((x) => x.settings.keepScreenOn);
+  useNotificationLoop(d);
+  useWakeLock(!!d.shift && !d.paused && keepScreenOn);
+  return null;
+}
+
+type Route ='azi' | 'plan' | 'stats' | 'setari' | 'istoric';
 const ROUTES: Route[] = ['azi', 'plan', 'stats', 'setari', 'istoric'];
 
 function readRoute(): Route {
@@ -40,6 +51,7 @@ export function App() {
 
   return (
     <div className="app">
+      <Background />
       {route === 'setari' ? <SettingsScreen go={go} />
         : route === 'plan' ? <PlanScreen />
         : route === 'istoric' ? <HistoryScreen go={go} />
