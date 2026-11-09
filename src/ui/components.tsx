@@ -1,5 +1,5 @@
 // Small reusable UI pieces, built for one-handed use: big targets, high contrast.
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { fmtHM, parseHM } from '../domain/time';
 
 export function Ring({ value, max, size = 104, label, sub, color = 'var(--good)' }: { value: number; max: number; size?: number; label: string; sub?: string; color?: string }) {
@@ -77,11 +77,39 @@ export function Stepper({ value, onChange, step = 1, min = 0, max = 1e9, format 
   value: number; onChange: (v: number) => void; step?: number; min?: number; max?: number; format?: (v: number) => string; label?: string;
 }) {
   const set = (v: number) => onChange(Math.min(max, Math.max(min, Math.round(v * 100) / 100)));
+  // Tap the value to type any exact number (e.g. 131), not only multiples of `step`.
+  const [draft, setDraft] = useState<string | null>(null);
+  const commit = () => {
+    if (draft === null) return;
+    const n = Number(draft.replace(',', '.'));
+    if (draft.trim() !== '' && Number.isFinite(n)) set(n);
+    setDraft(null);
+  };
   return (
     <div className="stepper">
       {label && <span className="stepper-label">{label}</span>}
       <button className="step-btn" onClick={() => set(value - step)} aria-label="Minus">−</button>
-      <span className="step-val">{format(value)}</span>
+      {draft === null ? (
+        <button className="step-val" onClick={() => setDraft(String(value).replace('.', ','))} aria-label={`${label ?? 'Valoare'}: ${format(value)}. Atinge ca să scrii altă valoare`}>
+          {format(value)}
+        </button>
+      ) : (
+        <input
+          className="step-input"
+          autoFocus
+          inputMode="decimal"
+          enterKeyHint="done"
+          value={draft}
+          aria-label={label ?? 'Valoare'}
+          onChange={(e) => setDraft(e.target.value.replace(/[^\d.,]/g, ''))}
+          onFocus={(e) => e.target.select()}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') commit();
+            if (e.key === 'Escape') setDraft(null);
+          }}
+        />
+      )}
       <button className="step-btn" onClick={() => set(value + step)} aria-label="Plus">+</button>
     </div>
   );
