@@ -140,7 +140,12 @@ export const useApp = create<AppState>((set, get) => {
       const get_ = (k: string) => kv.find((x) => x.key === k)?.value;
       set({
         ready: true,
-        settings: mergeSettings(get_('settings') as Partial<Settings> | undefined),
+        settings: (() => {
+          const st = mergeSettings(get_('settings') as Partial<Settings> | undefined);
+          // Anyone who already has data (plans, bonuses, shifts, rides…) is an existing user: no onboarding.
+          const hasData = plans.length + bonuses.length + shifts.length + rides.length + fuel.length + payouts.length + dailyTotals.length > 0;
+          return hasData && !st.onboarded ? { ...st, onboarded: true } : st;
+        })(),
         template: (get_('template') as WeekTemplate | undefined) ?? defaultTemplate(),
         heatmap: (get_('heatmap') as Heatmap | undefined) ?? defaultHeatmap(),
         sent: (get_('sent') as string[] | undefined) ?? [],
