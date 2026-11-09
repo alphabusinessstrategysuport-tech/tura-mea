@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { NAV } from './i18n/ro';
 import { useApp } from './store/app';
+import { HistoryScreen } from './ui/screens/HistoryScreen';
+import { QuickLog } from './ui/screens/QuickLog';
+import { TodayScreen } from './ui/screens/TodayScreen';
 import { PlanningWizard } from './ui/screens/PlanningWizard';
 import { PlanScreen } from './ui/screens/PlanScreen';
 import { SettingsScreen } from './ui/screens/SettingsScreen';
@@ -39,9 +42,12 @@ export function App() {
     <div className="app">
       {route === 'setari' ? <SettingsScreen go={go} />
         : route === 'plan' ? <PlanScreen />
+        : route === 'istoric' ? <HistoryScreen go={go} />
+        : route === 'azi' ? <TodayScreen go={go} />
         : <div className="screen"><h1>{route}</h1><p className="muted">În lucru…</p></div>}
 
       {wizardWeek && <PlanningWizard weekStart={wizardWeek} />}
+      <QuickLog />
 
       {toast && (
         <div className="toast" role="status">

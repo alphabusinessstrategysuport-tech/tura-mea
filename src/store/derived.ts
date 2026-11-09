@@ -141,7 +141,9 @@ export function computeDerived(src: Source, now: number): Derived {
   const hoursToday = todayAct.hours;
   const todayPlan = plan?.days.find((d) => d.day === today);
   const remainingToday = Math.max(0, todayTarget - todayAct.gross);
-  const remainingPlannedHours = Math.max(0.5, (todayPlan?.workHours ?? 0) - hoursToday);
+  const tplToday = src.template[days.indexOf(today)];
+  const plannedHoursToday = todayPlan?.workHours ?? (tplToday?.enabled ? (tplToday.minHours + tplToday.maxHours) / 2 : 0);
+  const remainingPlannedHours = Math.max(0.5, plannedHoursToday - hoursToday);
   const nowMin = dayMinutesOf(now, today);
   const currentItem = todayPlan?.items.find((i) => i.start <= nowMin && nowMin < i.end);
   const nextItem = todayPlan?.items.find((i) => i.start > nowMin && (i.kind !== 'work' || !currentItem || currentItem.kind !== 'work'));

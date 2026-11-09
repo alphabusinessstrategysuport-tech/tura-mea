@@ -25,7 +25,7 @@ export function BonusForm({ weekId, initial, onSave, onCancel }: { weekId: strin
   const hours = (normEnd - start) / 60;
 
   const save = () => {
-    if (!days.length) return alert('Alege cel puțin o zi.');
+    if (!days.length) return;
     onSave({
       id: initial?.id ?? newId(),
       weekId,
@@ -59,7 +59,7 @@ export function BonusForm({ weekId, initial, onSave, onCancel }: { weekId: strin
       <Stepper label="Recompensă" value={reward} step={5} min={0} max={5000} format={(v) => lei(v)} onChange={setReward} />
       <div className="btn-row">
         <button className="btn ghost" onClick={onCancel}>Renunță</button>
-        <button className="btn primary" onClick={save}>Salvează bonusul</button>
+        <button className="btn primary" disabled={!days.length} onClick={save}>{days.length ? 'Salvează bonusul' : 'Alege o zi'}</button>
       </div>
     </>
   );

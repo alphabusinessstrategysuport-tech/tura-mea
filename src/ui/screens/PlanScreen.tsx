@@ -38,8 +38,11 @@ export function DayList({ plan, rb, today, onEdit }: { plan: WeekPlan; rb?: Reba
             {d.items.length > 0 && <Timeline items={d.items} bonusWindows={windows} compact />}
             {d.workHours > 0 && (
               <div className="day-meta">
-                <span><b>{num(r && status !== 'past' ? r.suggestedHours : d.workHours, 1)} h</b> condus</span>
-                <span>~<b>{Math.round(d.rides * (r && status !== 'past' && d.gross > 0 ? r.targetGross / (d.gross + d.bonusGross) : 1))}</b> curse</span>
+                <span><b>{num(d.workHours, 1)} h</b> condus</span>
+                {r && status !== 'past' && r.suggestedHours > d.workHours + 0.25 && (
+                  <span className="warn-text">recomandat {num(r.suggestedHours, 1)} h</span>
+                )}
+                <span>~<b>{Math.round(d.rides * Math.max(1, r && status !== 'past' && d.gross > 0 ? r.targetGross / (d.gross + d.bonusGross) : 1))}</b> curse</span>
                 <span>net ~<b>{lei(d.net)}</b></span>
                 {d.bonusGross > 0 && <span>🎁 <b>{lei(d.bonusGross)}</b></span>}
                 {r?.capped && <span className="warn-text">la maxim</span>}

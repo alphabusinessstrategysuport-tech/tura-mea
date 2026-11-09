@@ -11,11 +11,11 @@ export function Ring({ value, max, size = 104, label, sub, color = 'var(--good)'
     <div className="ring" style={{ width: size }}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden>
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--track)" strokeWidth={stroke} />
-        <circle
+        {pct > 0 && <circle
           cx={size / 2} cy={size / 2} r={r} fill="none" stroke={pct >= 1 ? 'var(--gold)' : color} strokeWidth={stroke}
           strokeDasharray={`${c * pct} ${c}`} strokeLinecap="round" transform={`rotate(-90 ${size / 2} ${size / 2})`}
           style={{ transition: 'stroke-dasharray .6s ease' }}
-        />
+        />}
         <text x="50%" y="50%" dominantBaseline="central" textAnchor="middle" className="ring-pct">{Math.round(pct * 100)}%</text>
       </svg>
       <div className="ring-label">{label}</div>
