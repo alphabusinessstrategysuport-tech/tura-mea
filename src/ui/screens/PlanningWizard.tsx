@@ -1,6 +1,10 @@
 // Sunday planning flow: target → bonuses → generated schedule → done (calendar + notifications).
-import { AlarmClock, Bell, CalendarPlus } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { AlarmClock, Bell, CalendarPlus, Plus, ScanText } from 'lucide-react';
+import { useMemo, useRef, useState } from 'react';
+import { newOnly } from '../../domain/bonusImport';
+import { parseBoltCampaigns } from '../../domain/bonusOcr';
+import { readScreenshots } from '../ocr';
+import { haptic } from '../haptics';
 import { newId } from '../../data/db';
 import { fuelPerHourEstimate, weeklyFixedCosts, weeklyNetTarget } from '../../domain/finance';
 import { buildIcs, googlePlanningReminderUrl } from '../../domain/ics';
@@ -41,6 +45,32 @@ export function PlanningWizard({ weekStart }: { weekStart: string }) {
   const prevWeekBonuses = allBonuses.filter((b) => b.weekId === weekIdOf(addDays(weekStart, -7)));
   const plan = useMemo(() => (step >= 2 ? planWeek(src, weekStart, now, { netTarget }) : null), [src, weekStart, now, netTarget, step]);
   const close = () => openWizard(null);
+
+  const shotsRef = useRef<HTMLInputElement>(null);
+  const [ocr, setOcr] = useState<{ pct: number; label: string } | null>(null);
+  const importShots = async (files: File[]) => {
+    try {
+      const text = await readScreenshots(files, (pct, label) => setOcr({ pct, label }));
+      const all = parseBoltCampaigns(text, weekStart);
+      const forWeek = all.filter((b) => b.weekId === weekId);
+      const fresh = newOnly(forWeek, allBonuses);
+      for (const b of fresh) await upsertBonus({ ...b, id: newId(), mode: 'auto' });
+      setOcr(null);
+      if (fresh.length) {
+        haptic('success');
+        showToast(`✓ Am găsit ${forWeek.length} bonusuri, ${fresh.length} noi adăugate. Verifică-le în listă.`);
+      } else if (forWeek.length) {
+        showToast('Bonusurile din capturi există deja în listă.');
+      } else {
+        alert(all.length
+          ? `Am găsit ${all.length} bonusuri, dar sunt pentru altă săptămână decât ${weekLabel(weekStart)}.`
+          : 'N-am găsit bonusuri în capturi. Încearcă capturi clare din Bolt → Campanii sau adaugă-le manual.');
+      }
+    } catch {
+      setOcr(null);
+      alert('Nu am putut citi capturile. Verifică conexiunea la internet la prima folosire (se descarcă limba română) și încearcă din nou.');
+    }
+  };
 
   const copyPrev = async () => {
     for (const b of prevWeekBonuses) await upsertBonus({ ...b, id: newId(), weekId, mode: 'auto' });
@@ -102,7 +132,16 @@ export function PlanningWizard({ weekStart }: { weekStart: string }) {
                 </div>
               </div>
             ))}
-            <button className="btn primary huge" onClick={() => setEditing('new')}>+ Adaugă bonus</button>
+            <button className="btn primary huge" disabled={!!ocr} onClick={() => shotsRef.current?.click()}><ScanText size={26} /> Importă din capturi Bolt</button>
+            <input ref={shotsRef} type="file" accept="image/*" multiple hidden onChange={(e) => { const f = [...(e.target.files ?? [])]; e.target.value = ''; if (f.length) importShots(f); }} />
+            {ocr && (
+              <Card>
+                <span className="muted small">{ocr.label}</span>
+                <div className="bar"><div className="bar-fill gold" style={{ width: `${ocr.pct}%` }} /></div>
+              </Card>
+            )}
+            <p className="muted small">Fă capturi de ecran în Bolt → Campanii (derulează ca să prinzi toate bonusurile) și alege-le aici. Le citesc pe telefon, fără internet după prima folosire.</p>
+            <button className="btn ghost" onClick={() => setEditing('new')}><Plus size={18} /> Adaugă manual</button>
             {prevWeekBonuses.length > 0 && bonuses.length === 0 && (
               <button className="btn ghost" onClick={copyPrev}>Copiază bonusurile de săptămâna trecută ({prevWeekBonuses.length})</button>
             )}

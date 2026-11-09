@@ -30,13 +30,19 @@ Aplicație personală (PWA) care **planifică, urmărește și te motivează** �
 
 | Ecran | Ce găsești |
 |---|---|
-| **Azi** | Planul zilei, butoanele mari **Începe tura / Pauză / Termină**, inele de progres (azi, săptămâna, luna), încasat și rămas, lei/oră acum față de cât îți trebuie, progresul bonusurilor (de exemplu „7/12 curse, 2h 10m rămase”), butoane rapide de înregistrare. |
-| **Înregistrare rapidă** | Tastatură numerică mare pentru: cursă (suma brută), alimentare GPL, bonus încasat sau totalul zilei copiat din Bolt. Sumele folosite recent apar ca butoane. Fiecare înregistrare se poate anula imediat. |
-| **Plan** | Săptămâna zi cu zi: blocuri de lucru, pauze, ferestre de bonus, ținta fiecărei zile, net estimat. Atingi o zi ca s-o modifici. Dacă rămâi în urmă sau ești înainte, diferența se redistribuie automat pe zilele rămase. |
-| **Planificarea de duminică** | Asistent în 4 pași: țintă → bonusuri → program generat (cu verdictul pentru fiecare bonus) → salvare, export în calendar și notificări. |
-| **Statistici** | Pe săptămână și pe lună: profit net față de țintă, comision, combustibil, costuri fixe, ore, medie pe oră, cele mai bune ore și zile, ce a învățat aplicația din datele tale. |
-| **Setări** | Ținta (lunară sau săptămânală), costuri fixe (poți adăuga oricâte), comision, taxe, GPL, estimări, șablonul săptămânii, harta cererii, pauze, notificări, backup. |
-| **Istoric** | Toate înregistrările pe zile, cu ștergere. |
+| **Azi** | Card principal „Mai ai de încasat azi” cu 3 inele concentrice (zi, săptămână, lună), mesaj motivațional, programul zilei, bonusurile într-un carusel, **glisare pentru pornirea turei**, înregistrare rapidă. |
+| **Modul tură** | Pe tot ecranul cât ești în tură: încasat azi foarte mare, lei/oră acum față de necesar, bonusul activ cu numărătoare inversă, buton uriaș **+ Cursă**, Pauză, **glisare pentru închiderea turei**. „Vezi tot” te duce în restul aplicației. |
+| **Înregistrare rapidă** | Panou de jos (îl închizi glisând în jos), tastatură mare, butoane cu **sumele tale cele mai frecvente**, progresul bonusului în confirmare, „Anulează”. |
+| **Plan** | Bandă L–D cu mini-progres, **detaliul zilei glisabil stânga/dreapta**, timeline cu ferestrele de bonus, reechilibrare când rămâi în urmă sau ești înainte, rezumatul săptămânii. |
+| **Planificarea de duminică** | Țintă → bonusuri (**import din capturile Bolt** sau manual) → program generat cu verdict pentru fiecare bonus → salvare, calendar, notificări. |
+| **Statistici** | Profit NET față de țintă, grafic animat pe zile, defalcare bani, **harta orelor tale** (ultimele 8 săptămâni), observații automate, ce a învățat aplicația. |
+| **Setări** | Listă grupată: temă (întunecat/luminos), text mare, vibrații, bani, program, notificări (cu limite), date și backup, „Reia configurarea”. |
+| **Istoric** | Toate înregistrările pe zile; **glisezi stânga** ca să ștergi. |
+| **Onboarding** | Ghid de ~1 minut la prima pornire: țintă, costuri, comision și GPL, tipul de program, notificări și instalare. |
+
+**Design:** grafit + auriu (accent propriu, nu culorile Bolt sau Uber), font Inter inclus offline, iconițe Lucide, animații fluide (framer-motion), celebrare discretă cu particule aurii la ținta zilei și la bonusuri, vibrații opționale (oprite implicit).
+
+**Scurtături:** apasă lung pe iconița aplicației pentru „+ Cursă”, „Pornește tura” sau „Planul săptămânii”.
 
 Valorile de pornire: țintă **5.500 lei net pe lună** (≈ 1.270 lei pe săptămână, la 4,33 săptămâni pe lună), chirie 500 lei + contract 420 lei = **920 lei pe săptămână**, comision **10%** (din curse **și** din bonusuri), GPL **10 L/100 km**. **Prețul GPL trebuie completat de tine** (Setări sau primul pas al planificării).
 
@@ -45,13 +51,13 @@ Valorile de pornire: țintă **5.500 lei net pe lună** (≈ 1.270 lei pe săpt�
 **Duminică dimineața (până la 10:00):**
 1. Primești mementoul de la 09:00 sau apeși bannerul de pe ecranul Azi.
 2. Verifici ținta și actualizezi prețul GPL.
-3. Introduci bonusurile din Bolt (zi/zile, interval orar, număr de curse, recompensă). Butonul „Copiază de săptămâna trecută” te scutește de scris când bonusurile se repetă.
+3. Bonusurile: faci capturi de ecran în Bolt → Campanii și apeși **„Importă din capturi Bolt”**; aplicația le citește pe telefon (prima dată descarcă ~2–3 MB pentru limba română, apoi merge offline). Le verifici în listă. Poți adăuga și manual sau „Copiază de săptămâna trecută”.
 4. Te uiți pe programul propus. La fiecare bonus poți alege „Decide tu”, „Îl vreau” sau „Nu”.
 5. Salvezi, descarci programul în calendar (.ics) și permiți notificările.
 6. *(Recomandat)* Setări → **Exportă toate datele** pentru backup.
 
 **În timpul săptămânii:**
-- Apeși **Începe tura** când pleci, **Pauză** la masă, **Termină** când ajungi acasă.
+- **Glisezi** „Pornește tura” când pleci: apare Modul tură. **Pauză** la masă, apoi **glisezi** ca să închei tura; aplicația îți propune să pui totalul zilei din Bolt.
 - După fiecare cursă: **+ Cursă** și suma (sau un buton cu o sumă recentă). Dacă nu ai timp, seara pui doar **Total zi din Bolt**.
 - La alimentare: **Combustibil** și suma. Din alimentări aplicația învață cât te costă de fapt GPL-ul pe oră.
 - La bonus încasat: **Bonus încasat**.
@@ -156,7 +162,20 @@ Sunt estimări de bun-simț, nu date oficiale Bolt. După câteva săptămâni, 
 
 ## Notificări: ce merge și ce nu
 
-Tipuri, fiecare cu pornit/oprit din Setări: plecare la drum, pauze și masă, progres bonus („Încă 3 curse… mai ai 1h 20m”), timpul de mers acasă, planificarea de duminică (09:00 și 09:45), ținta zilei atinsă.
+Tipuri (fiecare se poate opri din Setări → Notificări):
+
+| Tip | Când | Exemplu |
+|---|---|---|
+| Plecare | cu 15 min înainte de un bloc; în pauză, când vine un vârf | „La 17:00 începe o perioadă aglomerată.” |
+| Pauze și masă | la începutul și sfârșitul pauzei | „Pauza s-a terminat. Spor la drum!” |
+| Bonus | la start, ≤3 curse rămase, ultima oră, ultimele 30 min | „Încă 3 curse pentru bonus 💪” |
+| Acasă | la finalul programului | „Gata pe azi 🏠” |
+| Ținta zilei | când o atingi | „Ținta de azi e atinsă 🎉” |
+| Rezumat | după tură; duminică 20:00 pentru săptămână | „Azi: 312 lei, 6h 10m, 52 lei/h.” |
+| Planificare | duminică 09:00 și 09:45, dacă nu ai planificat | „Hai să planificăm săptămâna.” |
+| Backup | duminică 20:30, dacă n-ai făcut backup de o săptămână | „Un backup rapid?” |
+
+**Anti-spam:** maximum 8 pe zi (reglabil), cel puțin 20 de minute între notificări (bonusurile au voie mai des), o singură notificare odată, liniște 00:00–07:00 în afara turei, butonul „Liniște 1h” direct pe notificare. Cu aplicația deschisă, apare un banner discret sus în loc de notificare de sistem. Textele motivaționale (calde, niciodată insistente) sunt în `src/domain/messages.ts`.
 
 **Limitare importantă:** o aplicație web (PWA) **nu poate programa notificări sigure la o oră fixă când e complet închisă**. Chrome a renunțat la API-ul care ar fi permis asta, iar notificările „push” cer un server.
 
@@ -183,7 +202,10 @@ src/
     actuals.ts         ce s-a întâmplat de fapt (ture, curse, totaluri)
     learning.ts        învățare din datele reale
     stats.ts           rezumate săptămână/lună
-    notifications.ts   CE și CÂND notificăm (texte incluse)
+    notifications.ts   CE și CÂND notificăm + regulile anti-spam
+    messages.ts        biblioteca de mesaje motivaționale
+    bonusImport.ts     linkuri de import pentru bonusuri
+    bonusOcr.ts        citirea bonusurilor din textul capturilor Bolt
     ics.ts             export în calendar
     time.ts            zile, săptămâni, fus orar București
     *.test.ts          teste unitare (npm test)
@@ -197,7 +219,9 @@ src/
     runner.ts          permisiuni, afișare, buclă, ecran aprins
   ui/
     theme.css          tema întunecată (culori în :root)
-    components.tsx     butoane, inele, tastatură numerică etc.
+    components.tsx     inele, glisare, panouri, tastatură numerică, celebrare
+    haptics.ts         vibrații Android
+    ocr.ts             citire text din capturi (încărcat doar la nevoie)
     Timeline.tsx       bara de program a zilei
     screens/           ecranele
   i18n/ro.ts           texte comune în română
@@ -208,9 +232,11 @@ Exemple de modificări:
 - **Cât de strict e „merită bonusul?”** → `src/domain/scheduler.ts` (căutați `baselineNetPerHour` și `relax ? 1.3 : 1.0`) și marja `BONUS_MARGIN`
 - **Valorile de pornire** → `src/domain/defaults.ts`
 - **Textele notificărilor** → `src/domain/notifications.ts`
-- **Culorile** → începutul fișierului `src/ui/theme.css`
+- **Culorile** (întunecat și luminos) → începutul fișierului `src/ui/theme.css`
+- **Mesajele motivaționale** → `src/domain/messages.ts`
+- **Limitele notificărilor** → `applyLimits` în `src/domain/notifications.ts`
 
-**Tehnologii:** React 18 + TypeScript + Vite (rapid și ușor de modificat), vite-plugin-pwa (offline și instalare), Dexie (IndexedDB), Zustand (stare), Vitest (teste). Fără biblioteci grele de UI; graficele sunt SVG simplu, deci aplicația rămâne mică (~370 KB) și rapidă.
+**Tehnologii:** React 18 + TypeScript + Vite, vite-plugin-pwa (offline și instalare), Dexie (IndexedDB), Zustand (stare), framer-motion (animații), lucide-react (iconițe), Inter (font), tesseract.js (citire capturi, încărcat doar la nevoie), Vitest (teste). Pachetul principal are ~175 KB comprimat.
 
 ## Date și backup
 
@@ -229,11 +255,15 @@ Exemple de modificări:
 - [x] Notificări (în aplicație și sistem) + mementouri prin calendar
 - [x] Statistici săptămână/lună + învățare din datele reale
 - [x] Backup JSON, offline, instalare PWA, publicare pe GitHub Pages (`npm run deploy`)
-- [x] 53 de teste unitare pentru logica de business
+- [x] Redesign v0.2: identitate grafit + auriu, mod luminos, Modul tură, glisări, animații, celebrări, onboarding, sumar cu hartă și observații
+- [x] Import de bonusuri din capturi Bolt (citire pe telefon) și prin link
+- [x] Notificări noi + anti-spam, mesaje motivaționale
+- [x] 73 de teste unitare pentru logica de business
 
 **Idei pentru pașii următori:**
 - Web Push printr-un server gratuit (notificări sigure cu aplicația închisă)
 - Publicare automată cu GitHub Actions (cere permisiunea `workflow`)
+- Partajare directă a capturilor din galerie către aplicație (Share Target)
 - Bonus săptămânal cu praguri multiple (de ex. 50 curse = 150 lei, 80 curse = 300 lei)
 - Factor de vreme sau evenimente (ploaie, concerte) care crește cererea pe o zi
 - Grafic cu evoluția pe mai multe luni

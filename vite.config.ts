@@ -25,6 +25,12 @@ export default defineConfig({
         orientation: 'portrait',
         background_color: '#0b0f14',
         theme_color: '#0b0f14',
+        // Long-press the app icon on Android for these shortcuts.
+        shortcuts: [
+          { name: 'Adaugă cursă', short_name: '+ Cursă', url: `${base}#/actiune/cursa`, icons: [{ src: 'icon-192.png', sizes: '192x192' }] },
+          { name: 'Pornește tura', short_name: 'Tura', url: `${base}#/actiune/tura`, icons: [{ src: 'icon-192.png', sizes: '192x192' }] },
+          { name: 'Planul săptămânii', short_name: 'Plan', url: `${base}#/plan`, icons: [{ src: 'icon-192.png', sizes: '192x192' }] },
+        ],
         icons: [
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
@@ -37,6 +43,14 @@ export default defineConfig({
         globIgnores: ['**/*cyrillic*', '**/*greek*', '**/*vietnamese*'],
         // OCR engine is loaded on demand only (bonus import from screenshots).
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+        runtimeCaching: [
+          {
+            // OCR engine + Romanian language data: downloaded once, then works offline.
+            urlPattern: ({ url }) => url.hostname === 'cdn.jsdelivr.net' || url.hostname === 'tessdata.projectnaptha.com',
+            handler: 'CacheFirst',
+            options: { cacheName: 'ocr-engine', expiration: { maxEntries: 20, maxAgeSeconds: 365 * 24 * 3600 }, cacheableResponse: { statuses: [0, 200] } },
+          },
+        ],
         navigateFallback: 'index.html',
         importScripts: ['sw-notify.js'],
       },

@@ -124,6 +124,23 @@ export function App() {
     document.documentElement.dataset.text = largeText ? 'large' : '';
   }, [largeText]);
 
+  // App-icon shortcuts: #/actiune/cursa opens "add ride", #/actiune/tura starts the shift.
+  useEffect(() => {
+    if (!ready) return;
+    const run = () => {
+      const m = location.hash.match(/^#\/actiune\/(cursa|tura)/);
+      if (!m) return;
+      const st = useApp.getState();
+      history.replaceState(null, '', '#/azi');
+      setRoute('azi');
+      if (m[1] === 'cursa') st.openQuickLog('ride');
+      else st.startShift();
+    };
+    run();
+    window.addEventListener('hashchange', run);
+    return () => window.removeEventListener('hashchange', run);
+  }, [ready]);
+
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'light' ? '#f6f5f2' : '#0e1116');
