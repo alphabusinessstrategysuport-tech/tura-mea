@@ -22,7 +22,7 @@ writeFileSync('dist/.nojekyll', '');
 
 console.log(`\n▶ Public pe ramura gh-pages…`);
 rmSync('dist/.git', { recursive: true, force: true });
-const git = (args) => run(`git -c user.name="${name}" -c user.email="${email}" ${args}`, { cwd: 'dist' });
+const git = (args) => run(`git -c core.autocrlf=false -c user.name="${name}" -c user.email="${email}" ${args}`, { cwd: 'dist' });
 git('init -q');
 git('checkout -q -b gh-pages');
 git('add -A');
